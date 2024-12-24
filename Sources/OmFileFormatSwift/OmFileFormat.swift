@@ -575,12 +575,11 @@ public final class OmFileReader<Backend: OmFileReaderBackend> {
     /// Future implementations could use async io via lib uring
     ///
     /// `into` is a 2d flat array with `arrayDim1Length` count elements in the fast dimension
-    /// `chunkBuffer` is used to temporary decompress chunks of data
     /// `arrayDim1Range` defines the offset in dimension 1 what is applied to the read into array
     /// `arrayDim1Length` if dim0Slow.count is greater than 1, the arrayDim1Length will be used as a stride. Like `nTime` in a 2d fast time array
     /// `dim0Slow` the slow dimension to read. Typically a location range
     /// `dim1Read` the fast dimension to read. Typical a time range
-    public func read(into: UnsafeMutablePointer<Float>, arrayDim1Range: Range<Int>, arrayDim1Length: Int, chunkBuffer: UnsafeMutableRawPointer, dim0Slow dim0Read: Range<Int>, dim1 dim1Read: Range<Int>) throws {
+    public func read(into: UnsafeMutablePointer<Float>, arrayDim1Range: Range<Int>, arrayDim1Length: Int, dim0Slow dim0Read: Range<Int>, dim1 dim1Read: Range<Int>) throws {
         
         //assert(arrayDim1Range.count == dim1Read.count)
         
@@ -622,17 +621,7 @@ public final class OmFileReader<Backend: OmFileReaderBackend> {
             guard error == ERROR_OK else {
                 throw OmFileFormatSwiftError.omDecoder(error: String(cString: om_error_string(error)))
             }
-            try reader.fn.decode(decoder: &decoder, into: into, chunkBuffer: chunkBuffer)
-        }
-    }
-    
-    /// Read data into existing output float buffer. Allocate buffer on demand
-    public func read(into: UnsafeMutablePointer<Float>, arrayDim1Range: Range<Int>, arrayDim1Length: Int, dim0Slow dim0Read: Range<Int>, dim1 dim1Read: Range<Int>) throws {
-        //assert(arrayDim1Range.count == dim1Read.count)
-        let bufferSize = P4NDEC256_BOUND(n: chunk0*chunk1, bytesPerElement: compression.bytesPerElement)
-        try withUnsafeTemporaryAllocation(byteCount: bufferSize, alignment: 4) { buffer in
-            try read(into: into, arrayDim1Range: arrayDim1Range, arrayDim1Length: arrayDim1Length, chunkBuffer: buffer.baseAddress!, dim0Slow: dim0Read, dim1: dim1Read)
-            
+            try reader.fn.decode(decoder: &decoder, into: into)
         }
     }
     
