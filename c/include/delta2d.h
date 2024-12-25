@@ -2,6 +2,7 @@
 #define delta2d_h
 
 #include <stdio.h>
+#include <stdint.h>
 
 void delta2d_decode8(const size_t length0, const size_t length1, int8_t* chunkBuffer);
 void delta2d_encode8(const size_t length0, const size_t length1, int8_t* chunkBuffer);
