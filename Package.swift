@@ -27,13 +27,13 @@ let package = Package(
     products: [
         .library(
             name: "OmFileFormat",
-            targets: ["OmFileFormatSwift"]),
+            targets: ["OmFileFormat"]),
     ],
     targets: [
         .target(
-            name: "OmFileFormatSwift",
+            name: "OmFileFormat",
             dependencies: ["OmFileFormatC"],
-            path: "Swift/OmFileFormatSwift",
+            path: "Swift/OmFileFormat",
             cSettings: cFlagsPFor2D,
             swiftSettings: swiftFlags
         ),
@@ -45,7 +45,7 @@ let package = Package(
         ),
         .testTarget(
             name: "OmFileFormatTests",
-            dependencies: ["OmFileFormatSwift"]
+            dependencies: ["OmFileFormat"]
         ),
     ]
 )

@@ -1,5 +1,5 @@
 import XCTest
-@testable import OmFileFormatSwift
+@testable import OmFileFormat
 @_implementationOnly import OmFileFormatC
 
 final class OmFileFormatTests: XCTestCase {
