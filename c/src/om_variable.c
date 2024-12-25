@@ -7,9 +7,6 @@
 
 #include "om_variable.h"
 
-#define SIZE_VARIABLEV3 8
-
-
 const OmVariable_t* om_variable_init(const void* src) {
     return src;
 }
@@ -23,7 +20,8 @@ OmString_t om_variable_get_name(const OmVariable_t* variable) {
         case OM_MEMORY_LAYOUT_ARRAY: {
             // 'Name' is after dimension arrays
             const OmVariableArrayV3_t* meta = (const OmVariableArrayV3_t*)variable;
-            return (OmString_t){.size = meta->name_size, .value = (char*)((void *)variable + sizeof(OmVariableArrayV3_t) + 16 * meta->children_count + 16 * meta->dimension_count)};
+            const char* name = (void *)variable + sizeof(OmVariableArrayV3_t) + 16 * meta->children_count + 16 * meta->dimension_count;
+            return (OmString_t){.size = meta->name_size, .value = name};
         }
         case OM_MEMORY_LAYOUT_SCALAR: {
             // 'Name' is after the scalar value
@@ -164,7 +162,7 @@ bool om_variable_get_children(const OmVariable_t* variable, uint32_t child_offse
             sizeof_variable = sizeof(OmVariableArrayV3_t);
             break;
         case OM_MEMORY_LAYOUT_SCALAR:
-            sizeof_variable = SIZE_VARIABLEV3;
+            sizeof_variable = sizeof(OmVariableV3_t);
             break;
     }
     const OmVariableV3_t* meta = (const OmVariableV3_t*)variable;
@@ -186,7 +184,7 @@ OmError_t om_variable_get_scalar(const OmVariable_t* variable, void* value) {
     }
     
     const OmVariableV3_t* meta = (const OmVariableV3_t*)variable;
-    const void* src = (const void*)((char *)variable + SIZE_VARIABLEV3 + 16 * meta->children_count);
+    const void* src = (const void*)((char *)variable + sizeof(OmVariableV3_t) + 16 * meta->children_count);
     switch (meta->data_type) {
         case DATA_TYPE_INT8:
         case DATA_TYPE_UINT8:
@@ -212,7 +210,7 @@ OmError_t om_variable_get_scalar(const OmVariable_t* variable, void* value) {
 }
 
 size_t om_variable_write_scalar_size(uint16_t name_size, uint32_t children_count, OmDataType_t data_type) {
-    size_t base = SIZE_VARIABLEV3 + name_size + children_count * 16;
+    size_t base = sizeof(OmVariableV3_t) + name_size + children_count * 16;
     switch (data_type) {
         case DATA_TYPE_NONE:
             return base;
@@ -255,10 +253,10 @@ void om_variable_write_scalar(void* dst, uint16_t name_size, uint32_t children_c
     };
     
     /// Set children
-    _om_variable_write_children(dst + SIZE_VARIABLEV3, children_count, children_offsets, children_sizes);
+    _om_variable_write_children(dst + sizeof(OmVariableV3_t), children_count, children_offsets, children_sizes);
     
     /// Set value
-    char* destValue = (char*)(dst + SIZE_VARIABLEV3 + 16 * children_count);
+    char* destValue = (char*)(dst + sizeof(OmVariableV3_t) + 16 * children_count);
     uint8_t valueSize = 0;
     switch (data_type) {
         case DATA_TYPE_INT8:
