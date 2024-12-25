@@ -5,7 +5,7 @@ Add `OmFileFormat` as a dependency to your `Package.swift`. Note: Unsafe compile
 
 ```swift
   dependencies: [
-    .package(url: "https://github.com/open-meteo/om-file-format.git", revision: "7c9a3f7a0a546fab8091b84720fc95e5ce37cdb2")
+    .package(url: "https://github.com/open-meteo/om-file-format.git", revision: "63b93c313dc5d29893f3aabccd616c3047b3fa87")
   ],
   targets: [
     .target(name: "MyApp", dependencies: [.product(name: "OmFileFormat", package: "om-file-format")])
