@@ -1,5 +1,7 @@
 # OM-File-Format library
 
+[![Test](https://github.com/open-meteo/om-file-format/actions/workflows/test.yml/badge.svg)](https://github.com/open-meteo/om-file-format/actions/workflows/test.yml) [![GitHub license](https://img.shields.io/github/license/open-meteo/om-file-format)](https://github.com/open-meteo/om-file-format/blob/main/LICENSE)
+
 The Open-Meteo OM-File format is designed for efficient storage and distribution of multi-dimensional environmental data. By chunking, compressing, and indexing the data, OM-Files enable cloud-native random reads while minimizing file sizes. The format supports hierarchical data structures similar to NetCDF or HDF5.
 
 This library implements the format in C, with a high-level Swift abstraction integrated directly into the Open-Meteo weather API. Future bindings for Python, TypeScript, and Rust are planned.
