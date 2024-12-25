@@ -12,3 +12,17 @@ Add `OmFileFormat` as a dependency to your `Package.swift`. Note: Unsafe compile
   ]
 ```
 
+# Reading files
+
+Assuming the file `data.om` directly contains a floating point array with 3 dimensions
+
+```
+import OmFileFormat
+
+let file = "data.om"
+let fn = try FileHandle.openFileReading(file: file)
+let mmap = try MmapFile(fn: fn)
+let read = try OmFileReader2(fn: mmap).asArray(of: Float.self)!
+
+let data = try read.read(range: [50..<51, 20..<21, 10..<200])
+```
