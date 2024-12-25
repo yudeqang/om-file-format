@@ -132,6 +132,7 @@ OmError_t om_encoder_init(OmEncoder_t* encoder, float scale_factor, float add_of
                 default:
                     return ERROR_INVALID_DATA_TYPE;
             }
+            break;
             
         case COMPRESSION_PFOR_DELTA2D_INT16_LOGARITHMIC:
             if (data_type != DATA_TYPE_FLOAT_ARRAY) {
