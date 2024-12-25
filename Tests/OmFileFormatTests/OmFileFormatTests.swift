@@ -290,7 +290,7 @@ import Foundation
                 try r.withUnsafeMutableBufferPointer({
                     try read.read(into: $0.baseAddress!, range: [x..<x+1, y..<y+1], intoCubeOffset: [1,1], intoCubeDimension: [3,3])
                 })
-                #expect(r == [.nan, .nan, .nan, .nan, Float(x*5 + y), .nan, .nan, .nan, .nan])
+                #expect(r.testSimilar([.nan, .nan, .nan, .nan, Float(x*5 + y), .nan, .nan, .nan, .nan]))
             }
         }
         
@@ -381,7 +381,7 @@ import Foundation
                 try r.withUnsafeMutableBufferPointer({
                     try read.read(into: $0.baseAddress!, range: [x..<x+1, y..<y+1], intoCubeOffset: [1,1], intoCubeDimension: [3,3])
                 })
-                #expect(r == [.nan, .nan, .nan, .nan, Float(x*5 + y), .nan, .nan, .nan, .nan])
+                #expect(r.testSimilar([.nan, .nan, .nan, .nan, Float(x*5 + y), .nan, .nan, .nan, .nan]))
             }
         }
         
@@ -471,7 +471,7 @@ import Foundation
                 try r.withUnsafeMutableBufferPointer({
                     try read.read(into: $0.baseAddress!, range: [x..<x+1, y..<y+1], intoCubeOffset: [1,1], intoCubeDimension: [3,3])
                 })
-                #expect(r == [.nan, .nan, .nan, .nan, Float(x*5 + y), .nan, .nan, .nan, .nan])
+                #expect(r.testSimilar([.nan, .nan, .nan, .nan, Float(x*5 + y), .nan, .nan, .nan, .nan]))
             }
         }
         
@@ -704,5 +704,25 @@ import Foundation
         }
 
         #expect(ints == intsRoundtrip)
+    }
+}
+
+
+extension Array where Element == Float {
+    func testSimilar(_ b: [Float], accuracy: Float = 0.0001) -> Bool {
+        let a = self
+        guard a.count == b.count else {
+            Issue.record("Array length different")
+            return false
+        }
+        for (a1,b1) in zip(a,b) {
+            if a1.isNaN && b1.isNaN {
+                continue
+            }
+            if a1.isNaN || b1.isNaN || abs(a1 - b1) > accuracy {
+                return false
+            }
+        }
+        return true
     }
 }
