@@ -41,6 +41,30 @@ void om_common_copy_float_to_int16(uint64_t length, float scale_factor, float ad
     }
 }
 
+void om_common_copy_float_to_int32(uint64_t length, float scale_factor, float add_offset, const void* src, void* dst) {
+    for (uint64_t i = 0; i < length; ++i) {
+        float val = ((float *)src)[i];
+        if (isnan(val)) {
+            ((int32_t *)dst)[i] = INT32_MAX;
+        } else {
+            float scaled = val * scale_factor + add_offset;
+            ((int32_t *)dst)[i] = (int32_t)fmaxf(INT32_MIN, fminf(INT32_MAX, roundf(scaled)));
+        }
+    }
+}
+
+void om_common_copy_double_to_int64(uint64_t length, float scale_factor, float add_offset, const void* src, void* dst) {
+    for (uint64_t i = 0; i < length; ++i) {
+        double val = ((double *)src)[i];
+        if (isnan(val)) {
+            ((int64_t *)dst)[i] = INT64_MAX;
+        } else {
+            double scaled = val * (double)scale_factor + (double)add_offset;
+            ((int64_t *)dst)[i] = (int64_t)fmax(INT64_MIN, fmin(INT64_MAX, round(scaled)));
+        }
+    }
+}
+
 void om_common_copy_float_to_int16_log10(uint64_t length, float scale_factor, float add_offset, const void* src, void* dst) {
     for (uint64_t i = 0; i < length; ++i) {
         float val = ((float *)src)[i];
@@ -57,6 +81,20 @@ void om_common_copy_int16_to_float(uint64_t length, float scale_factor, float ad
     for (uint64_t i = 0; i < length; ++i) {
         int16_t val = ((int16_t *)src)[i];
         ((float *)dst)[i] = (val == INT16_MAX) ? NAN : (float)val / scale_factor - add_offset;
+    }
+}
+
+void om_common_copy_int32_to_float(uint64_t length, float scale_factor, float add_offset, const void* src, void* dst) {
+    for (uint64_t i = 0; i < length; ++i) {
+        int32_t val = ((int32_t *)src)[i];
+        ((float *)dst)[i] = (val == INT32_MAX) ? NAN : (float)val / scale_factor - add_offset;
+    }
+}
+
+void om_common_copy_int64_to_double(uint64_t length, float scale_factor, float add_offset, const void* src, void* dst) {
+    for (uint64_t i = 0; i < length; ++i) {
+        int64_t val = ((int64_t *)src)[i];
+        ((double *)dst)[i] = (val == INT64_MAX) ? NAN : (double)val / (double)scale_factor - (double)add_offset;
     }
 }
 

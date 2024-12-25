@@ -66,9 +66,10 @@ typedef enum {
 
 /// Compression types
 typedef enum {
-    COMPRESSION_PFOR_16BIT_DELTA2D = 0, // Lossy compression using 2D delta coding and scalefactor. Only supports float and scales to 16-bit integer.
+    COMPRESSION_PFOR_DELTA2D_INT16 = 0, // Lossy compression using 2D delta coding and scale-factor. Only supports float and scales to 16-bit signed integer.
     COMPRESSION_FPX_XOR2D = 1, // Lossless float/double compression using 2D xor coding.
-    COMPRESSION_PFOR_16BIT_DELTA2D_LOGARITHMIC = 3, // Similar to `P4NZDEC256` but applies `log10(1+x)` before.
+    COMPRESSION_PFOR_DELTA2D = 2, // PFor integer compression. Floating point values are scaled to 32 bit signed integers. Doubles are scaled to 64 bit signed integers.
+    COMPRESSION_PFOR_DELTA2D_INT16_LOGARITHMIC = 3, // Similar to `COMPRESSION_PFOR_DELTA2D_INT16` but applies `log10(1+x)` before.
     COMPRESSION_NONE = 4
 } OmCompression_t;
 
@@ -94,12 +95,16 @@ typedef enum {
 
 /// Copy 16 bit integer array and convert to float
 void om_common_copy_float_to_int16(uint64_t length, float scale_factor, float add_offset, const void* src, void* dst);
+void om_common_copy_float_to_int32(uint64_t length, float scale_factor, float add_offset, const void* src, void* dst);
+void om_common_copy_double_to_int64(uint64_t length, float scale_factor, float add_offset, const void* src, void* dst);
 
 /// Copy 16 bit integer array and convert to float and scale log10
 void om_common_copy_float_to_int16_log10(uint64_t length, float scale_factor, float add_offset, const void* src, void* dst);
 
 /// Convert int16 and scale to float
 void om_common_copy_int16_to_float(uint64_t length, float scale_factor, float add_offset, const void* src, void* dst);
+void om_common_copy_int32_to_float(uint64_t length, float scale_factor, float add_offset, const void* src, void* dst);
+void om_common_copy_int64_to_double(uint64_t length, float scale_factor, float add_offset, const void* src, void* dst);
 
 /// Convert int16 and scale to float with log10
 void om_common_copy_int16_to_float_log10(uint64_t length, float scale_factor, float add_offset, const void* src, void* dst);

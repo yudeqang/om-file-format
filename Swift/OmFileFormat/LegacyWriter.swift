@@ -132,9 +132,9 @@ public final class OmFileWriterState<Backend: OmFileWriterBackend> {
     
     public func write(_ uncompressedInput: ArraySlice<Float>) throws {
         switch compression {
-        case .p4nzdec256:
+        case .pfor_delta2d_16bit:
             fallthrough
-        case .p4nzdec256logarithmic:
+        case .pfor_delta2d_16bit_logarithmic:
             let buffer = readBuffer.baseAddress!.assumingMemoryBound(to: Int16.self)
             // Make sure that we received an even number of `c0 * chunk0` or all remaining elements at once. The last chunk might be smaller than `c0 * chunk0`
             /// Number of elements in a row of chunks. Not just one chunk.
@@ -170,13 +170,13 @@ public final class OmFileWriterState<Backend: OmFileWriterBackend> {
                                 // Int16.min is not representable because of zigzag coding
                                 buffer[posBuffer] = Int16.max
                             }
-                            let scaled = compression == .p4nzdec256logarithmic ? (log10(1+val) * scalefactor) : (val * scalefactor)
+                            let scaled = compression == .pfor_delta2d_16bit_logarithmic ? (log10(1+val) * scalefactor) : (val * scalefactor)
                             buffer[posBuffer] = Int16(max(Float(Int16.min), min(Float(Int16.max), round(scaled))))
                         }
                     }
                     
                     // 2D delta encoding
-                    delta2d_encode(length0, length1, buffer)
+                    delta2d_encode16(length0, length1, buffer)
                     
                     let writeLength = p4nzenc128v16(buffer, length1 * length0, writeBuffer.baseAddress?.advanced(by: writeBufferPos))
                     
@@ -201,7 +201,7 @@ public final class OmFileWriterState<Backend: OmFileWriterBackend> {
                 }
             }
             c0 += nReadChunks
-        case .fpxdec32:
+        case .fpx_xor2d:
             let bufferFloat = readBuffer.baseAddress!.assumingMemoryBound(to: Float.self)
             let buffer = readBuffer.baseAddress!.assumingMemoryBound(to: UInt32.self)
             
@@ -265,6 +265,8 @@ public final class OmFileWriterState<Backend: OmFileWriterBackend> {
                 }
             }
             c0 += nReadChunks
+        case .pfor_delta2d:
+            fatalError("Not supported here")
         }
     }
 }

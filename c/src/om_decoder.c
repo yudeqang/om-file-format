@@ -38,7 +38,7 @@ OmError_t om_decoder_init(OmDecoder_t* decoder, const OmVariable_t* variable, ui
             data_type = DATA_TYPE_FLOAT_ARRAY;
             compression = (OmCompression_t)metaV1->compression_type;
             if (metaV1->version == 1) {
-                compression = COMPRESSION_PFOR_16BIT_DELTA2D;
+                compression = COMPRESSION_PFOR_DELTA2D_INT16;
             }
             lut_chunk_length = 0;
             lut_start = 40; // Right after header
@@ -129,14 +129,14 @@ OmError_t om_decoder_init(OmDecoder_t* decoder, const OmVariable_t* variable, ui
     
     // TODO more compression and datatypes
     switch (compression) {
-        case COMPRESSION_PFOR_16BIT_DELTA2D:
+        case COMPRESSION_PFOR_DELTA2D_INT16:
             if (data_type != DATA_TYPE_FLOAT_ARRAY) {
                 return ERROR_INVALID_DATA_TYPE;
             }
             decoder->bytes_per_element = 4;
             decoder->bytes_per_element_compressed = 2;
             decoder->decompress_copy_callback = om_common_copy_int16_to_float;
-            decoder->decompress_filter_callback = (om_compress_filter_callback_t)delta2d_decode;
+            decoder->decompress_filter_callback = (om_compress_filter_callback_t)delta2d_decode16;
             decoder->decompress_callback = (om_compress_callback_t)p4nzdec128v16;
             break;
             
@@ -157,14 +157,62 @@ OmError_t om_decoder_init(OmDecoder_t* decoder, const OmVariable_t* variable, ui
             }
             break;
             
-        case COMPRESSION_PFOR_16BIT_DELTA2D_LOGARITHMIC:
+        case COMPRESSION_PFOR_DELTA2D:
+            switch (data_type) {
+                case DATA_TYPE_INT8_ARRAY:
+                    decoder->decompress_callback = (om_compress_callback_t)p4nzdec8;
+                    decoder->decompress_filter_callback = (om_compress_filter_callback_t)delta2d_decode8;
+                    break;
+                case DATA_TYPE_UINT8_ARRAY:
+                    decoder->decompress_callback = (om_compress_callback_t)p4nddec8;
+                    decoder->decompress_filter_callback = (om_compress_filter_callback_t)delta2d_decode8;
+                    break;
+                case DATA_TYPE_INT16_ARRAY:
+                    decoder->decompress_callback = (om_compress_callback_t)p4nzdec128v16;
+                    decoder->decompress_filter_callback = (om_compress_filter_callback_t)delta2d_decode16;
+                    break;
+                case DATA_TYPE_UINT16_ARRAY:
+                    decoder->decompress_callback = (om_compress_callback_t)p4nddec128v16;
+                    decoder->decompress_filter_callback = (om_compress_filter_callback_t)delta2d_decode16;
+                    break;
+                case DATA_TYPE_INT32_ARRAY:
+                    decoder->decompress_callback = (om_compress_callback_t)p4nzdec128v32;
+                    decoder->decompress_filter_callback = (om_compress_filter_callback_t)delta2d_decode32;
+                    break;
+                case DATA_TYPE_UINT32_ARRAY:
+                    decoder->decompress_callback = (om_compress_callback_t)p4nddec128v32;
+                    decoder->decompress_filter_callback = (om_compress_filter_callback_t)delta2d_decode32;
+                    break;
+                case DATA_TYPE_INT64_ARRAY:
+                    decoder->decompress_callback = (om_compress_callback_t)p4nzdec64;
+                    decoder->decompress_filter_callback = (om_compress_filter_callback_t)delta2d_decode64;
+                    break;
+                case DATA_TYPE_UINT64_ARRAY:
+                    decoder->decompress_callback = (om_compress_callback_t)p4nddec64;
+                    decoder->decompress_filter_callback = (om_compress_filter_callback_t)delta2d_decode64;
+                    break;
+                case DATA_TYPE_FLOAT_ARRAY:
+                    decoder->decompress_copy_callback = om_common_copy_int32_to_float;
+                    decoder->decompress_filter_callback = (om_compress_filter_callback_t)delta2d_decode32;
+                    decoder->decompress_callback = (om_compress_callback_t)p4nzdec128v32;
+                    break;
+                case DATA_TYPE_DOUBLE_ARRAY:
+                    decoder->decompress_copy_callback = om_common_copy_int64_to_double;
+                    decoder->decompress_filter_callback = (om_compress_filter_callback_t)delta2d_decode64;
+                    decoder->decompress_callback = (om_compress_callback_t)p4nzdec64;
+                    break;
+                default:
+                    return ERROR_INVALID_DATA_TYPE;
+            }
+            
+        case COMPRESSION_PFOR_DELTA2D_INT16_LOGARITHMIC:
             if (data_type != DATA_TYPE_FLOAT_ARRAY) {
                 return ERROR_INVALID_DATA_TYPE;
             }
             decoder->bytes_per_element = 4;
             decoder->bytes_per_element_compressed = 2;
             decoder->decompress_copy_callback = om_common_copy_int16_to_float_log10;
-            decoder->decompress_filter_callback = (om_compress_filter_callback_t)delta2d_decode;
+            decoder->decompress_filter_callback = (om_compress_filter_callback_t)delta2d_decode16;
             decoder->decompress_callback = (om_compress_callback_t)p4nzdec128v16;
             break;
             

@@ -3,11 +3,17 @@
 
 #include <stdio.h>
 
-void delta2d_decode(const size_t length0, const size_t length1, short* chunkBuffer);
-void delta2d_encode(const size_t length0, const size_t length1, short* chunkBuffer);
+void delta2d_decode8(const size_t length0, const size_t length1, int8_t* chunkBuffer);
+void delta2d_encode8(const size_t length0, const size_t length1, int8_t* chunkBuffer);
 
-void delta2d_decode32(const size_t length0, const size_t length1, int* chunkBuffer);
-void delta2d_encode32(const size_t length0, const size_t length1, int* chunkBuffer);
+void delta2d_decode16(const size_t length0, const size_t length1, int16_t* chunkBuffer);
+void delta2d_encode16(const size_t length0, const size_t length1, int16_t* chunkBuffer);
+
+void delta2d_decode32(const size_t length0, const size_t length1, int32_t* chunkBuffer);
+void delta2d_encode32(const size_t length0, const size_t length1, int32_t* chunkBuffer);
+
+void delta2d_decode64(const size_t length0, const size_t length1, int64_t* chunkBuffer);
+void delta2d_encode64(const size_t length0, const size_t length1, int64_t* chunkBuffer);
 
 void delta2d_encode_xor(const size_t length0, const size_t length1, float* chunkBuffer);
 void delta2d_decode_xor(const size_t length0, const size_t length1, float* chunkBuffer);
