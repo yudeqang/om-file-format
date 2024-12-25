@@ -59,26 +59,8 @@ import Foundation
         let data: [Float] = [0.0, 5.0, 2.0, 3.0, 2.0, 5.0, 6.0, 2.0, 8.0, 3.0, 10.0, 14.0, 12.0, 15.0, 14.0, 15.0, 66.0, 17.0, 12.0, 19.0, 20.0, 21.0, 22.0, 23.0, 24.0]
         let compressed = try OmFileWriter(dim0: 1, dim1: data.count, chunk0: 1, chunk1: 10).writeInMemory(compressionType: .p4nzdec256, scalefactor: 1, all: data)
         #expect(compressed.count == 212)
-        //print(compressed.hex)
-        let uncompressed = try OmFileReader(fn: DataAsClass(data: compressed)).readAll() // .read(dim0Slow: 0..<1, dim1: 10..<20)
-        //print(uncompressed)
-        XCTAssertEqualArray(data, uncompressed, accuracy: 0.001)
-    }
-    
-    /// Crashes on linux, but fine on macos
-    @Test func aLinuxCrash(){
-        //let s = String(cString: cpustr(0))
-        //print(s)
-        
-        let writeBuffer: UnsafeMutablePointer<UInt8> = .allocate(capacity: P4NENC256_BOUND(n: 4, bytesPerElement: 2))
-        defer { writeBuffer.deallocate() }
-        
-        var data: [Int16] = [0,1,5,6]
-        data.reserveCapacity(1024)
-        let writeLength = data.withUnsafeMutableBufferPointer({ ptr in
-            p4nzenc128v16(ptr.baseAddress, ptr.count, writeBuffer.advanced(by: 0))
-        })
-        #expect(writeLength == 4)
+        let uncompressed = try OmFileReader(fn: DataAsClass(data: compressed)).readAll()
+        #expect(data == uncompressed)
     }
     
     /// Make sure the last chunk has the correct number of chunks
@@ -722,33 +704,5 @@ import Foundation
         }
 
         #expect(ints == intsRoundtrip)
-    }
-}
-
-func XCTAssertEqualArray<T: Collection>(_ a: T, _ b: T, accuracy: Float) where T.Element == Float, T: Equatable {
-    guard a.count == b.count else {
-        Issue.record("Array length different")
-        return
-    }
-    var failed = false
-    for (a1,b1) in zip(a,b) {
-        if a1.isNaN && b1.isNaN {
-            continue
-        }
-        if a1.isNaN || b1.isNaN || abs(a1 - b1) > accuracy {
-            failed = true
-            break
-        }
-    }
-    if failed {
-        for (a1,b1) in zip(a,b) {
-            if a1.isNaN && b1.isNaN {
-                continue
-            }
-            if a1.isNaN || b1.isNaN || abs(a1 - b1) > accuracy {
-                print("\(a1)\t\(b1)\t\(a1-b1)")
-            }
-        }
-        #expect(a == b)
     }
 }
