@@ -9,6 +9,8 @@
 #include <math.h>
 #include "vp4.h"
 #include "fp.h"
+#pragma clang diagnostic ignored "-Wunused-parameter"
+
 
 const char* om_error_string(OmError_t error) {
     switch (error) {

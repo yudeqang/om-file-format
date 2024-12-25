@@ -279,7 +279,8 @@ bool _om_decoder_next_chunk_position(const OmDecoder_t *decoder, OmRange_t *chun
     bool linearRead = true;
     const uint64_t dimensions_count = decoder->dimensions_count;
     
-    for (int64_t i = dimensions_count - 1; i >= 0; --i) {
+    for (uint64_t i_forward = 0; i_forward < dimensions_count; i_forward++) {
+        const uint64_t i = dimensions_count - i_forward - 1;
         const uint64_t dimension = decoder->dimensions[i];
         const uint64_t chunk = decoder->chunks[i];
         const uint64_t read_offset = decoder->read_offset[i];
@@ -564,7 +565,8 @@ uint64_t _om_decoder_decode_chunk(const OmDecoder_t *decoder, uint64_t chunkInde
     //printf("decode dimcount=%d \n", decoder->dims_count );
     
     // Count length in chunk and find first buffer offset position.
-    for (int64_t i = dimensions_count - 1; i >= 0; --i) {
+    for (uint64_t i_forward = 0; i_forward < dimensions_count; i_forward++) {
+        const uint64_t i = dimensions_count - i_forward - 1;
         const uint64_t dimension = decoder->dimensions[i];
         const uint64_t chunk = decoder->chunks[i];
         const uint64_t read_offset = decoder->read_offset[i];
@@ -640,7 +642,8 @@ uint64_t _om_decoder_decode_chunk(const OmDecoder_t *decoder, uint64_t chunkInde
         rollingMultiplyChunkLength = 1;
         linearReadCount = 1;
         linearRead = true;
-        for (int64_t i = dimensions_count-1; i >= 0; i--) {
+        for (uint64_t i_forward = 0; i_forward < dimensions_count; i_forward++) {
+            const uint64_t i = dimensions_count - i_forward - 1;
             const uint64_t dimension = decoder->dimensions[i];
             const uint64_t chunk = decoder->chunks[i];
             const uint64_t read_offset = decoder->read_offset[i];

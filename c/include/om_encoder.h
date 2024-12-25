@@ -55,10 +55,10 @@ uint64_t om_encoder_chunk_buffer_size(const OmEncoder_t* encoder);
 uint64_t om_encoder_compressed_chunk_buffer_size(const OmEncoder_t* encoder);
 
 /// Calculate the required buffer size for the entire compressed LUT
-uint64_t om_encoder_lut_buffer_size(const OmEncoder_t* encoder, const uint64_t* lookUpTable, uint64_t lookUpTableCount);
+uint64_t om_encoder_lut_buffer_size(const uint64_t* lookUpTable, uint64_t lookUpTableCount);
 
 /// Compress the LUT and return the size of compressed LUT in bytes
-uint64_t om_encoder_compress_lut(const OmEncoder_t* encoder, const uint64_t* lookUpTable, uint64_t lookUpTableCount, uint8_t* out, uint64_t size_of_compressed_lut);
+uint64_t om_encoder_compress_lut(const uint64_t* lookUpTable, uint64_t lookUpTableCount, uint8_t* out, uint64_t size_of_compressed_lut);
 
 /// Compress a single chunk. Chunk buffer must be of size `OmEncoder_chunkBufferSize`
 uint64_t om_encoder_compress_chunk(const OmEncoder_t* encoder, const void* array, const uint64_t* arrayDimensions, const uint64_t* arrayOffset, const uint64_t* arrayCount, uint64_t chunkIndex, uint64_t chunkIndexOffsetInThisArray, uint8_t* out, uint8_t* chunkBuffer);

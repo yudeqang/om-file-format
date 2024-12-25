@@ -216,11 +216,11 @@ public final class OmFileWriterArray<OmType: OmFileArrayDataTypeProtocol, FileHa
         let lut_offset = buffer.totalBytesWritten
         
         /// The size of the total compressed LUT including some padding
-        let buffer_size = om_encoder_lut_buffer_size(&encoder, lookUpTable, UInt64(lookUpTable.count))
+        let buffer_size = om_encoder_lut_buffer_size(lookUpTable, UInt64(lookUpTable.count))
         try buffer.reallocate(minimumCapacity: Int(buffer_size))
         
         /// Compress the LUT and return the actual compressed LUT size
-        let compressed_lut_size = om_encoder_compress_lut(&encoder, lookUpTable, UInt64(lookUpTable.count), buffer.bufferAtWritePosition, buffer_size)
+        let compressed_lut_size = om_encoder_compress_lut(lookUpTable, UInt64(lookUpTable.count), buffer.bufferAtWritePosition, buffer_size)
         buffer.incrementWritePosition(by: Int(compressed_lut_size))
         return OmFileWriterArrayFinalised(
             scale_factor: scale_factor,

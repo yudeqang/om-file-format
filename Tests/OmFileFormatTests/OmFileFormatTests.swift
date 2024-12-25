@@ -196,7 +196,7 @@ import Foundation
         let fn = try FileHandle.createNewFile(file: file)
         let fileWriter = OmFileWriter2(fn: fn, initialCapacity: 8)
         
-        let writer = try fileWriter.prepareArray(type: Float.self, dimensions: dims, chunkDimensions: [2,2,2], compression: .pfor_delta2d, scale_factor: 1, add_offset: 0)
+        let writer = try fileWriter.prepareArray(type: Float.self, dimensions: dims, chunkDimensions: [2,2,2], compression: .pfor_delta2d_16bit, scale_factor: 1, add_offset: 0)
         try writer.writeData(array: data)
         let variableMeta = try writer.finalise()
         

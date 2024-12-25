@@ -154,7 +154,7 @@ OmError_t om_encoder_init(OmEncoder_t* encoder, float scale_factor, float add_of
 
 uint64_t om_encoder_count_chunks(const OmEncoder_t* encoder) {
     uint64_t n = 1;
-    for (int i = 0; i < encoder->dimension_count; i++) {
+    for (uint64_t i = 0; i < encoder->dimension_count; i++) {
         n *= divide_rounded_up(encoder->dimensions[i], encoder->chunks[i]);
     }
     return n;
@@ -162,7 +162,7 @@ uint64_t om_encoder_count_chunks(const OmEncoder_t* encoder) {
 
 uint64_t om_encoder_count_chunks_in_array(const OmEncoder_t* encoder, const uint64_t* array_count) {
     uint64_t numberOfChunksInArray = 1;
-    for (int i = 0; i < encoder->dimension_count; i++) {
+    for (uint64_t i = 0; i < encoder->dimension_count; i++) {
         numberOfChunksInArray *= divide_rounded_up(array_count[i], encoder->chunks[i]);
     }
     return numberOfChunksInArray;
@@ -170,7 +170,7 @@ uint64_t om_encoder_count_chunks_in_array(const OmEncoder_t* encoder, const uint
 
 uint64_t om_encoder_chunk_buffer_size(const OmEncoder_t* encoder) {
     uint64_t chunkLength = 1;
-    for (int i = 0; i < encoder->dimension_count; i++) {
+    for (uint64_t i = 0; i < encoder->dimension_count; i++) {
         chunkLength *= encoder->chunks[i];
     }
     return chunkLength * encoder->bytes_per_element_compressed;
@@ -178,18 +178,18 @@ uint64_t om_encoder_chunk_buffer_size(const OmEncoder_t* encoder) {
 
 uint64_t om_encoder_compressed_chunk_buffer_size(const OmEncoder_t* encoder) {
     uint64_t chunkLength = 1;
-    for (int i = 0; i < encoder->dimension_count; i++) {
+    for (uint64_t i = 0; i < encoder->dimension_count; i++) {
         chunkLength *= encoder->chunks[i];
     }
     // P4NENC256_BOUND. Compressor may write 32 integers more
     return (chunkLength + 255) /256 + (chunkLength + 32) * encoder->bytes_per_element_compressed;
 }
 
-uint64_t om_encoder_lut_buffer_size(const OmEncoder_t* encoder, const uint64_t* lookUpTable, uint64_t lookUpTableCount) {
+uint64_t om_encoder_lut_buffer_size(const uint64_t* lookUpTable, uint64_t lookUpTableCount) {
     uint64_t buffer[LUT_CHUNK_COUNT+32] = {0};
     const uint64_t nLutChunks = divide_rounded_up(lookUpTableCount, LUT_CHUNK_COUNT);
     uint64_t maxLength = 0;
-    for (int i = 0; i < nLutChunks; i++) {
+    for (uint64_t i = 0; i < nLutChunks; i++) {
         const uint64_t rangeStart = i * LUT_CHUNK_COUNT;
         const uint64_t rangeEnd = min(rangeStart + LUT_CHUNK_COUNT, lookUpTableCount);
         const uint64_t len = p4ndenc64((uint64_t*)&lookUpTable[rangeStart], rangeEnd - rangeStart, (unsigned char *)buffer);
@@ -199,7 +199,7 @@ uint64_t om_encoder_lut_buffer_size(const OmEncoder_t* encoder, const uint64_t* 
     return maxLength * nLutChunks + 32 * sizeof(uint64_t);
 }
 
-uint64_t om_encoder_compress_lut(const OmEncoder_t* encoder, const uint64_t* lookUpTable, uint64_t lookUpTableCount, uint8_t* out, uint64_t compressed_lut_buffer_size) {
+uint64_t om_encoder_compress_lut(const uint64_t* lookUpTable, uint64_t lookUpTableCount, uint8_t* out, uint64_t compressed_lut_buffer_size) {
     const uint64_t nLutChunks = divide_rounded_up(lookUpTableCount, LUT_CHUNK_COUNT);
     const uint64_t lutSize = compressed_lut_buffer_size - 32 * sizeof(uint64_t);
     const uint64_t lutChunkLength = lutSize / nLutChunks;
@@ -243,7 +243,8 @@ uint64_t om_encoder_compress_chunk(
     bool linearRead = true;
     uint64_t lengthLast = 0;
 
-    for (int64_t i = dimension_count - 1; i >= 0; i--) {
+    for (uint64_t i_forward = 0; i_forward < dimension_count; i_forward++) {
+        const uint64_t i = dimension_count - i_forward - 1;
         const uint64_t dimension = encoder->dimensions[i];
         const uint64_t chunk = encoder->chunks[i];
         
@@ -296,7 +297,8 @@ uint64_t om_encoder_compress_chunk(
         linearRead = true;
         linearReadCount = 1;
 
-        for (int64_t i = dimension_count - 1; i >= 0; i--) {
+        for (uint64_t i_forward = 0; i_forward < dimension_count; i_forward++) {
+            uint64_t i = dimension_count - i_forward - 1;
             const uint64_t chunk = encoder->chunks[i];
             
             const uint64_t qPos = ((readCoordinate / rollingMultiplyTargetCube) % arrayDimensions[i] - arrayOffset[i]) / chunk;

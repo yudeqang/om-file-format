@@ -33,6 +33,7 @@
 #pragma clang diagnostic ignored "-Wunknown-pragmas"
 #pragma clang diagnostic ignored "-Wunused-but-set-variable"
 #pragma clang diagnostic ignored "-Wshorten-64-to-32"
+#pragma clang diagnostic ignored "-Wunused-parameter"
 
 #pragma warning( disable : 4005)
 #pragma warning( disable : 4090)

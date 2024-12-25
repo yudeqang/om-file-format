@@ -31,6 +31,8 @@
 #pragma clang diagnostic ignored "-Wmacro-redefined"
 #pragma clang diagnostic ignored "-Wconstant-conversion"
 #pragma clang diagnostic ignored "-Wshorten-64-to-32"
+#pragma clang diagnostic ignored "-Wsign-compare"
+
 
 #ifndef USIZE //--------------------------------- Functions ----------------------------------------------------------------------
 #pragma warning( disable : 4005)
