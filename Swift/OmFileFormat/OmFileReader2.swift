@@ -185,7 +185,6 @@ public struct OmFileReader2Array<Backend: OmFileReaderBackend, OmType: OmFileArr
     
     /// Read a variable as an array of dynamic type.
     public func read(into: UnsafeMutablePointer<OmType>, range: [Range<UInt64>], intoCubeOffset: [UInt64]? = nil, intoCubeDimension: [UInt64]? = nil) throws {
-        
         let offset = range.map({$0.lowerBound})
         let count = range.map({UInt64($0.count)})
         try self.read(into: into, offset: offset, count: count, intoCubeOffset: intoCubeOffset, intoCubeDimension: intoCubeDimension)
@@ -227,10 +226,10 @@ public struct OmFileReader2Array<Backend: OmFileReaderBackend, OmType: OmFileArr
     }
     
     /// Prefetch data
-    public func willNeed(dimRead: [Range<UInt64>]? = nil) throws {
-        let dimRead = dimRead ?? self.getDimensions().map({ 0..<$0 })
-        let offset = dimRead.map({$0.lowerBound})
-        let count = dimRead.map({UInt64($0.count)})
+    public func willNeed(range: [Range<UInt64>]? = nil) throws {
+        let range = range ?? self.getDimensions().map({ 0..<$0 })
+        let offset = range.map({$0.lowerBound})
+        let count = range.map({UInt64($0.count)})
         try self.willNeed(offset: offset, count: count)
     }
     
