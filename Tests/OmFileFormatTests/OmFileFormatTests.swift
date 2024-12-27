@@ -57,7 +57,7 @@ import Foundation
     
     @Test func inMemory() throws {
         let data: [Float] = [0.0, 5.0, 2.0, 3.0, 2.0, 5.0, 6.0, 2.0, 8.0, 3.0, 10.0, 14.0, 12.0, 15.0, 14.0, 15.0, 66.0, 17.0, 12.0, 19.0, 20.0, 21.0, 22.0, 23.0, 24.0]
-        let compressed = try OmFileWriter(dim0: 1, dim1: data.count, chunk0: 1, chunk1: 10).writeInMemory(compressionType: .pfor_delta2d_16bit, scalefactor: 1, all: data)
+        let compressed = try OmFileWriter(dim0: 1, dim1: data.count, chunk0: 1, chunk1: 10).writeInMemory(compressionType: .pfor_delta2d_int16, scalefactor: 1, all: data)
         #expect(compressed.count == 212)
         let uncompressed = try OmFileReader(fn: DataAsClass(data: compressed)).readAll()
         #expect(data == uncompressed)
@@ -67,7 +67,7 @@ import Foundation
     @Test func writeMoreDataThenExpected() throws {
         let file = "writeMoreDataThenExpected.om"
         try FileManager.default.removeItemIfExists(at: file)
-        #expect(throws: (any Error).self) { try OmFileWriter(dim0: 5, dim1: 5, chunk0: 2, chunk1: 2).write(file: file, compressionType: .pfor_delta2d_16bit, scalefactor: 1, overwrite: false, supplyChunk: { dim0pos in
+        #expect(throws: (any Error).self) { try OmFileWriter(dim0: 5, dim1: 5, chunk0: 2, chunk1: 2).write(file: file, compressionType: .pfor_delta2d_int16, scalefactor: 1, overwrite: false, supplyChunk: { dim0pos in
             if dim0pos == 0 {
                 return ArraySlice((0..<10).map({ Float($0) }))
             }
@@ -89,7 +89,7 @@ import Foundation
         let fn = try FileHandle.createNewFile(file: file)
         
         let fileWriter = OmFileWriter2(fn: fn, initialCapacity: 8)
-        let writer = try fileWriter.prepareArray(type: Float.self, dimensions: [100,100,10], chunkDimensions: [2,2,2], compression: .pfor_delta2d_16bit, scale_factor: 1, add_offset: 0)
+        let writer = try fileWriter.prepareArray(type: Float.self, dimensions: [100,100,10], chunkDimensions: [2,2,2], compression: .pfor_delta2d_int16, scale_factor: 1, add_offset: 0)
         
         let data = (0..<100000).map({Float($0 % 10000)})
         try writer.writeData(array: data)
@@ -120,7 +120,7 @@ import Foundation
         let fn = try FileHandle.createNewFile(file: file)
         let fileWriter = OmFileWriter2(fn: fn, initialCapacity: 8)
         
-        let writer = try fileWriter.prepareArray(type: Float.self, dimensions: [5,5], chunkDimensions: [2,2], compression: .pfor_delta2d_16bit, scale_factor: 1, add_offset: 0)
+        let writer = try fileWriter.prepareArray(type: Float.self, dimensions: [5,5], chunkDimensions: [2,2], compression: .pfor_delta2d_int16, scale_factor: 1, add_offset: 0)
         
         // Directly feed individual chunks
         try writer.writeData(array: [0.0, 1.0, 5.0, 6.0], arrayDimensions: [2,2])
@@ -157,7 +157,7 @@ import Foundation
         let fn = try FileHandle.createNewFile(file: file)
         let fileWriter = OmFileWriter2(fn: fn, initialCapacity: 8)
         
-        let writer = try fileWriter.prepareArray(type: Float.self, dimensions: [5,5], chunkDimensions: [2,2], compression: .pfor_delta2d_16bit, scale_factor: 1, add_offset: 0)
+        let writer = try fileWriter.prepareArray(type: Float.self, dimensions: [5,5], chunkDimensions: [2,2], compression: .pfor_delta2d_int16, scale_factor: 1, add_offset: 0)
         
         /// Deliberately add NaN on all positions that should not be written to the file. Only the inner 5x5 array is written
         let data = [.nan, .nan, .nan, .nan, .nan, .nan, .nan, .nan, Float(0.0), 1.0, 2.0, 3.0, 4.0, .nan, .nan, 5.0, 6.0, 7.0, 8.0, 9.0, .nan, .nan, 10.0, 11.0, 12.0, 13.0, 14.0, .nan, .nan, 15.0, 16.0, 17.0, 18.0, 19.0, .nan, .nan, 20.0, 21.0, 22.0, 23.0, 24.0, .nan, .nan, .nan, .nan, .nan, .nan, .nan, .nan]
@@ -171,7 +171,7 @@ import Foundation
         let readFile = try OmFileReader2(fn: readFn)
         let read = readFile.asArray(of: Float.self)!
         #expect(readFile.dataType == .float_array)
-        #expect(read.compression == .pfor_delta2d_16bit)
+        #expect(read.compression == .pfor_delta2d_int16)
         #expect(read.scaleFactor == 1)
         #expect(read.addOffset == 0)
         #expect(read.getDimensions().count == 2)
@@ -196,7 +196,7 @@ import Foundation
         let fn = try FileHandle.createNewFile(file: file)
         let fileWriter = OmFileWriter2(fn: fn, initialCapacity: 8)
         
-        let writer = try fileWriter.prepareArray(type: Float.self, dimensions: dims, chunkDimensions: [2,2,2], compression: .pfor_delta2d_16bit, scale_factor: 1, add_offset: 0)
+        let writer = try fileWriter.prepareArray(type: Float.self, dimensions: dims, chunkDimensions: [2,2,2], compression: .pfor_delta2d_int16, scale_factor: 1, add_offset: 0)
         try writer.writeData(array: data)
         let variableMeta = try writer.finalise()
         
@@ -261,7 +261,7 @@ import Foundation
         let fn = try FileHandle.createNewFile(file: file)
         let fileWriter = OmFileWriter2(fn: fn, initialCapacity: 8)
         
-        let writer = try fileWriter.prepareArray(type: Float.self, dimensions: dims, chunkDimensions: [2,2], compression: .pfor_delta2d_16bit, scale_factor: 1, add_offset: 0)
+        let writer = try fileWriter.prepareArray(type: Float.self, dimensions: dims, chunkDimensions: [2,2], compression: .pfor_delta2d_int16, scale_factor: 1, add_offset: 0)
         
         let data = [Float(0.0), 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0, 17.0, 18.0, 19.0, 20.0, 21.0, 22.0, 23.0, 24.0]
         try writer.writeData(array: data)
@@ -352,7 +352,7 @@ import Foundation
         let fn = try FileHandle.createNewFile(file: file)
         let fileWriter = OmFileWriter2(fn: fn, initialCapacity: 8)
         
-        let writer = try fileWriter.prepareArray(type: Float.self, dimensions: dims, chunkDimensions: [2,2], compression: .pfor_delta2d_16bit, scale_factor: 1, add_offset: 0)
+        let writer = try fileWriter.prepareArray(type: Float.self, dimensions: dims, chunkDimensions: [2,2], compression: .pfor_delta2d_int16, scale_factor: 1, add_offset: 0)
         
         let data = [Float(0.0), 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0, 17.0, 18.0, 19.0, 20.0, 21.0, 22.0, 23.0, 24.0]
         try writer.writeData(array: data)
@@ -435,7 +435,7 @@ import Foundation
         let file = "oldWriterNewReader.om"
         try FileManager.default.removeItemIfExists(at: file)
         
-        let fn = try OmFileWriter(dim0: 5, dim1: 5, chunk0: 2, chunk1: 2).write(file: file, compressionType: .pfor_delta2d_16bit, scalefactor: 1, overwrite: false, supplyChunk: { dim0pos in
+        let fn = try OmFileWriter(dim0: 5, dim1: 5, chunk0: 2, chunk1: 2).write(file: file, compressionType: .pfor_delta2d_int16, scalefactor: 1, overwrite: false, supplyChunk: { dim0pos in
             
             if dim0pos == 0 {
                 return ArraySlice((0..<10).map({ Float($0) }))
@@ -519,7 +519,7 @@ import Foundation
         let file = "write.om"
         try FileManager.default.removeItemIfExists(at: file)
         
-        try OmFileWriter(dim0: 5, dim1: 5, chunk0: 2, chunk1: 2).write(file: file, compressionType: .pfor_delta2d_16bit, scalefactor: 1, overwrite: false, supplyChunk: { dim0pos in
+        try OmFileWriter(dim0: 5, dim1: 5, chunk0: 2, chunk1: 2).write(file: file, compressionType: .pfor_delta2d_int16, scalefactor: 1, overwrite: false, supplyChunk: { dim0pos in
             
             if dim0pos == 0 {
                 return ArraySlice((0..<10).map({ Float($0) }))
@@ -595,7 +595,7 @@ import Foundation
         try FileManager.default.removeItemIfExists(at: file)
         
         let data = (0..<(5*5)).map({ val in Float.nan })
-        try OmFileWriter(dim0: 5, dim1: 5, chunk0: 5, chunk1: 5).write(file: file, compressionType: .pfor_delta2d_16bit, scalefactor: 1, all: data)
+        try OmFileWriter(dim0: 5, dim1: 5, chunk0: 5, chunk1: 5).write(file: file, compressionType: .pfor_delta2d_int16, scalefactor: 1, all: data)
         
         let read = try OmFileReader(file: file)
         let data2 = try read.read(dim0Slow: nil, dim1: nil)

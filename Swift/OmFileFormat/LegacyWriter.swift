@@ -132,9 +132,9 @@ public final class OmFileWriterState<Backend: OmFileWriterBackend> {
     
     public func write(_ uncompressedInput: ArraySlice<Float>) throws {
         switch compression {
-        case .pfor_delta2d_16bit:
+        case .pfor_delta2d_int16:
             fallthrough
-        case .pfor_delta2d_16bit_logarithmic:
+        case .pfor_delta2d_int16_logarithmic:
             let buffer = readBuffer.baseAddress!.assumingMemoryBound(to: Int16.self)
             // Make sure that we received an even number of `c0 * chunk0` or all remaining elements at once. The last chunk might be smaller than `c0 * chunk0`
             /// Number of elements in a row of chunks. Not just one chunk.
@@ -170,7 +170,7 @@ public final class OmFileWriterState<Backend: OmFileWriterBackend> {
                                 // Int16.min is not representable because of zigzag coding
                                 buffer[posBuffer] = Int16.max
                             }
-                            let scaled = compression == .pfor_delta2d_16bit_logarithmic ? (log10(1+val) * scalefactor) : (val * scalefactor)
+                            let scaled = compression == .pfor_delta2d_int16_logarithmic ? (log10(1+val) * scalefactor) : (val * scalefactor)
                             buffer[posBuffer] = Int16(max(Float(Int16.min), min(Float(Int16.max), round(scaled))))
                         }
                     }

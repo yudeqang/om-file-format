@@ -54,7 +54,7 @@ public enum DataType: UInt8, Codable {
 
 public enum CompressionType: UInt8, Codable {
     /// Lossy compression using 2D delta coding and scalefactor. Only support float which are scaled to 16 bit signed integers
-    case pfor_delta2d_16bit = 0
+    case pfor_delta2d_int16 = 0
     
     /// Lossless compression using 2D xor coding for float and double values
     case fpx_xor2d = 1
@@ -62,18 +62,18 @@ public enum CompressionType: UInt8, Codable {
     /// PFor integer compression. Floating point values are scaled to 32 bit signed integers. Doubles are scaled to 64 bit signed integers.
     case pfor_delta2d = 2
     
-    ///  Similar to `pfor_delta2d_16bit` but applies `log10(1+x)` before
-    case pfor_delta2d_16bit_logarithmic = 3
+    ///  Similar to `pfor_delta2d_int16` but applies `log10(1+x)` before
+    case pfor_delta2d_int16_logarithmic = 3
     
     func toC() -> OmCompression_t {
         switch self {
-        case .pfor_delta2d_16bit:
+        case .pfor_delta2d_int16:
             return COMPRESSION_PFOR_DELTA2D_INT16
         case .fpx_xor2d:
             return COMPRESSION_FPX_XOR2D
         case .pfor_delta2d:
             return COMPRESSION_PFOR_DELTA2D
-        case .pfor_delta2d_16bit_logarithmic:
+        case .pfor_delta2d_int16_logarithmic:
             return COMPRESSION_PFOR_DELTA2D_INT16_LOGARITHMIC
         }
     }
