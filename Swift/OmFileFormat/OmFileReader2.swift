@@ -52,6 +52,10 @@ public struct OmFileReader2<Backend: OmFileReaderBackend> {
         self.variable = variable
     }
     
+    public func isLegacyFormat() -> Bool {
+        return om_header_type(fn.getData(offset: 0, count: om_header_size())) == OM_HEADER_LEGACY
+    }
+    
     public var dataType: DataType {
         return DataType(rawValue: UInt8(om_variable_get_type(variable).rawValue))!
     }
