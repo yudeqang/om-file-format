@@ -46,7 +46,7 @@ The C code is available in [/c](./c/)
 TODO document C functions
 
 
-### Data hierarchy model:
+### Data Hierarchy Model:
 - The file trailer contains the position of the root `Variable`
 - Each `Variable` has a datatype and payload. E.g. Int16 has the number as 2-byte payload. An array stores the look-up-table position and array dimension information. The actual compressed array data, is stored at the beginning of the file.
 - Each `Variable` has a name
@@ -58,6 +58,40 @@ A `Variable` be be of different types:
 - `Array` of type Int8, Int16, etc with dimensions, chunks and compression type information
 - `String` to be implemented
 - `String Array` to be implemented
+
+### Examples
+The following examples show how data with attribute can be encoded into an OM-File format
+
+**Example 1: Plain array inside an OM-File:**
+```
+Root: Name="temperature_2m" Type=Float32-Array Dimensions=[720,1400,24] Chunks=[1,50,24]
+```
+
+**Example 2: Array with attributes**
+```
+Root: Name="temperature_2m" Type=Float32-Array Dimensions=[720,1400,24] Chunks=[1,50,24]
+|- Name="dimension_names" Type=String-Array Dimensions=[3]
+|- Name="long_name" Type=String Value="Temperature 2 metres above ground"
+|- Name="unit" Type=String Value="Celsius"
+|- Name="height" Type=Int32 Value=2
+```
+
+**Example 3: Multiple Arrays with attributes**
+```
+Root: Type=None
+|- Name="temperature_2m" Type=Float32-Array Dimensions=[720,1400,24] Chunks=[1,50,24]
+  |- Name="dimension_names" Type=String-Array Dimensions=[3]
+  |- Name="long_name" Type=String Value="Temperature 2 metres above ground"
+  |- Name="unit" Type=String Value="Celsius"
+  |- Name="height" Type=Int32 Value=2
+|- Name="relative_humidity_2m" Type=Float32-Array Dimensions=[720,1400,24] Chunks=[1,50,24]
+  |- Name="dimension_names" Type=String-Array Dimensions=[3]
+  |- Name="long_name" Type=String Value="Relative Humidity 2 metres above ground"
+  |- Name="unit" Type=String Value="Percentage"
+  |- Name="height" Type=Int32 Value=2
+```
+
+### Model
 
 ```mermaid
 classDiagram
