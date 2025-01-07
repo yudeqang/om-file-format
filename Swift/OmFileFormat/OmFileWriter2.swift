@@ -164,11 +164,21 @@ public final class OmFileWriterArray<OmType: OmFileArrayDataTypeProtocol, FileHa
     /// `arrayRead` specify which parts of this array should be read
     /// It is important that this function can write data out to a FileHandle to empty the buffer. Otherwise the buffer could grow to multiple gigabytes
     public func writeData(array: [OmType], arrayDimensions: [UInt64]? = nil, arrayOffset: [UInt64]? = nil, arrayCount: [UInt64]? = nil) throws {
+        try array.withUnsafeBufferPointer { array in
+            try writeData(pointer: array, arrayDimensions: arrayDimensions, arrayOffset: arrayOffset, arrayCount: arrayCount)
+        }
+    }
+    
+    /// Compress data and write it to file. Can be all, a single or multiple chunks. If multiple chunks are given at once, they must align with chunks.
+    /// `arrayDimensions` specify the total dimensions of the input array
+    /// `arrayRead` specify which parts of this array should be read
+    /// It is important that this function can write data out to a FileHandle to empty the buffer. Otherwise the buffer could grow to multiple gigabytes
+    public func writeData(pointer: UnsafeBufferPointer<OmType>, arrayDimensions: [UInt64]? = nil, arrayOffset: [UInt64]? = nil, arrayCount: [UInt64]? = nil) throws {
         let arrayDimensions = arrayDimensions ?? self.dimensions
         let arrayCount = arrayCount ?? arrayDimensions
         let arrayOffset = arrayOffset ?? [UInt64](repeating: 0, count: arrayDimensions.count)
         
-        assert(array.count == arrayDimensions.reduce(1, *))
+        assert(pointer.count == arrayDimensions.reduce(1, *))
         assert(arrayDimensions.allSatisfy({$0 >= 0}))
         assert(arrayOffset.allSatisfy({$0 >= 0}))
         assert(zip(arrayDimensions, zip(arrayOffset, arrayCount)).allSatisfy { $1.0 + $1.1 <= $0 })
@@ -189,19 +199,17 @@ public final class OmFileWriterArray<OmType: OmFileArrayDataTypeProtocol, FileHa
         for chunkIndexOffsetInThisArray in 0..<numberOfChunksInArray {
             try buffer.reallocate(minimumCapacity: Int(compressedChunkBufferSize))
             
-            let bytes_written = array.withUnsafeBytes { array in
-                return om_encoder_compress_chunk(
-                    &encoder,
-                    array.baseAddress,
-                    arrayDimensions,
-                    arrayOffset,
-                    arrayCount,
-                    UInt64(chunkIndex),
-                    chunkIndexOffsetInThisArray,
-                    buffer.bufferAtWritePosition,
-                    chunkBuffer.baseAddress
-                )
-            }
+            let bytes_written = om_encoder_compress_chunk(
+                &encoder,
+                pointer.baseAddress,
+                arrayDimensions,
+                arrayOffset,
+                arrayCount,
+                UInt64(chunkIndex),
+                chunkIndexOffsetInThisArray,
+                buffer.bufferAtWritePosition,
+                chunkBuffer.baseAddress
+            )
 
             buffer.incrementWritePosition(by: Int(bytes_written))
             
