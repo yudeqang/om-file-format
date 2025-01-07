@@ -83,7 +83,7 @@ import Foundation
         try FileManager.default.removeItem(atPath: "\(file)~")
     }
     
-    @Test func writeLarge() throws {
+    @Test func writeLarge() async throws {
         let file = "writeLarge.om"
         try FileManager.default.removeItemIfExists(at: file)
         let fn = try FileHandle.createNewFile(file: file)
@@ -103,7 +103,7 @@ import Foundation
         let a1 = try read.read(range: [50..<51, 20..<21, 1..<2])
         #expect(a1 == [201.0])
                 
-        let a = try read.read(range: [0..<100, 0..<100, 0..<10])
+        let a = try await read.readConcurrent(range: [0..<100, 0..<100, 0..<10])
         #expect(a == data)
         
         #expect(readFn.count == 154176)
