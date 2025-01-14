@@ -9,8 +9,10 @@
 #include <math.h>
 #include "vp4.h"
 #include "fp.h"
+#include "conf.h"
 #pragma clang diagnostic ignored "-Wunused-parameter"
-
+#pragma clang diagnostic warning "-Wbad-function-cast"
+#pragma clang diagnostic error "-Wswitch"
 
 const char* om_error_string(OmError_t error) {
     switch (error) {
@@ -26,9 +28,78 @@ const char* om_error_string(OmError_t error) {
             return "Not an OM file";
         case ERROR_DEFLATED_SIZE_MISMATCH:
             return "Corrupted data: Deflated size does not match";
-            break;
     }
     return "";
+}
+
+ALWAYS_INLINE uint8_t om_get_bytes_per_element(OmDataType_t data_type, OmError_t* error) {
+    switch (data_type) {
+        case DATA_TYPE_INT8_ARRAY:
+        case DATA_TYPE_UINT8_ARRAY:
+            return 1;
+
+        case DATA_TYPE_INT16_ARRAY:
+        case DATA_TYPE_UINT16_ARRAY:
+            return 2;
+
+        case DATA_TYPE_INT32_ARRAY:
+        case DATA_TYPE_UINT32_ARRAY:
+        case DATA_TYPE_FLOAT_ARRAY:
+            return 4;
+
+        case DATA_TYPE_INT64_ARRAY:
+        case DATA_TYPE_UINT64_ARRAY:
+        case DATA_TYPE_DOUBLE_ARRAY:
+            return 8;
+
+        case DATA_TYPE_STRING_ARRAY:
+            // NOTE: STRING_ARRAY is currently not implemented!
+            *error = ERROR_INVALID_DATA_TYPE;
+            return 0;
+            break;
+
+        case DATA_TYPE_INT8:
+        case DATA_TYPE_UINT8:
+        case DATA_TYPE_INT16:
+        case DATA_TYPE_UINT16:
+        case DATA_TYPE_INT32:
+        case DATA_TYPE_UINT32:
+        case DATA_TYPE_FLOAT:
+        case DATA_TYPE_INT64:
+        case DATA_TYPE_UINT64:
+        case DATA_TYPE_DOUBLE:
+        case DATA_TYPE_NONE:
+        case DATA_TYPE_STRING:
+            // NOTE: These datatypes are scalar and should not be used with this function!
+            *error = ERROR_INVALID_DATA_TYPE;
+            return 0;
+    }
+}
+
+ALWAYS_INLINE uint8_t om_get_bytes_per_element_compressed(OmDataType_t data_type, OmCompression_t compression, OmError_t* error) {
+    // Adjust compressed size based on compression type
+    switch (compression) {
+        case COMPRESSION_PFOR_DELTA2D_INT16:
+        case COMPRESSION_PFOR_DELTA2D_INT16_LOGARITHMIC:
+            if (data_type != DATA_TYPE_FLOAT_ARRAY) {
+                *error = ERROR_INVALID_DATA_TYPE;
+                break;
+            }
+            return 2;
+
+        case COMPRESSION_FPX_XOR2D:
+            if (data_type != DATA_TYPE_FLOAT_ARRAY && data_type != DATA_TYPE_DOUBLE_ARRAY) {
+                *error = ERROR_INVALID_DATA_TYPE;
+                break;
+            }
+            return om_get_bytes_per_element(data_type, error);
+        case COMPRESSION_PFOR_DELTA2D:
+            return om_get_bytes_per_element(data_type, error);
+
+        default:
+            *error = ERROR_INVALID_COMPRESSION_TYPE;
+    }
+    return om_get_bytes_per_element(data_type, error);
 }
 
 void om_common_copy_float_to_int16(uint64_t length, float scale_factor, float add_offset, const void* src, void* dst) {
@@ -38,7 +109,8 @@ void om_common_copy_float_to_int16(uint64_t length, float scale_factor, float ad
             ((int16_t *)dst)[i] = INT16_MAX;
         } else {
             float scaled = val * scale_factor + add_offset;
-            ((int16_t *)dst)[i] = (int16_t)fmaxf(INT16_MIN, fminf(INT16_MAX, roundf(scaled)));
+            float clamped = fmaxf(INT16_MIN, fminf(INT16_MAX, roundf(scaled)));
+            ((int16_t *)dst)[i] = (int16_t)clamped;
         }
     }
 }
@@ -50,7 +122,8 @@ void om_common_copy_float_to_int32(uint64_t length, float scale_factor, float ad
             ((int32_t *)dst)[i] = INT32_MAX;
         } else {
             float scaled = val * scale_factor + add_offset;
-            ((int32_t *)dst)[i] = (int32_t)fmaxf((float)INT32_MIN, fminf((float)INT32_MAX, roundf(scaled)));
+            float clamped = fmaxf((float)INT32_MIN, fminf((float)INT32_MAX, roundf(scaled)));
+            ((int32_t *)dst)[i] = (int32_t)clamped;
         }
     }
 }
@@ -62,7 +135,8 @@ void om_common_copy_double_to_int64(uint64_t length, float scale_factor, float a
             ((int64_t *)dst)[i] = INT64_MAX;
         } else {
             double scaled = val * (double)scale_factor + (double)add_offset;
-            ((int64_t *)dst)[i] = (int64_t)fmax((float)INT64_MIN, fmin((float)INT64_MAX, round(scaled)));
+            double clamped = fmax((double)INT64_MIN, fmin((double)INT64_MAX, round(scaled)));
+            ((int64_t *)dst)[i] = (int64_t)clamped;
         }
     }
 }
@@ -74,7 +148,8 @@ void om_common_copy_float_to_int16_log10(uint64_t length, float scale_factor, fl
             ((int16_t *)dst)[i] = INT16_MAX;
         } else {
             float scaled = log10f(1 + val) * scale_factor;
-            ((int16_t *)dst)[i] = (int16_t)fmaxf((float)INT16_MIN, fminf((float)INT16_MAX, roundf(scaled)));
+            float clamped = fmaxf(INT16_MIN, fminf(INT16_MAX, roundf(scaled)));
+            ((int16_t *)dst)[i] = (int16_t)clamped;
         }
     }
 }

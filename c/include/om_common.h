@@ -12,15 +12,6 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-/// The function to convert a single a a sequence of elements and convert data type. Applies scale factor.
-typedef void(*om_compress_copy_callback_t)(uint64_t length, float scale_factor, float add_offset, const void* src, void* dest);
-
-/// compress input, of n-elements to output and return number of compressed byte
-typedef uint64_t(*om_compress_callback_t)(const void* src, uint64_t length, void* dest);
-
-/// Perform a 2d filter operation
-typedef void(*om_compress_filter_callback_t)(const uint64_t length0, const uint64_t length1, void* buffer);
-
 /// Number of look-up-table addresses to individual data chunks that will be compressed.
 /// Effectively only the first address will be stored and the next addresses are delta and fixed-bytes-encoded.
 /// A larger number reduces file size marginally if a lot of chunks are used. However, read performance decreases.
@@ -73,7 +64,15 @@ typedef enum {
     COMPRESSION_NONE = 4
 } OmCompression_t;
 
+/// Get the number of bytes per element.
+/// This function will set an error if called for an invalid data type.
+/// It only supports array types.
+uint8_t om_get_bytes_per_element(OmDataType_t data_type, OmError_t* error);
 
+/// Get the number of bytes per element after compression.
+/// This function will set an error if called for an invalid data type.
+/// It only supports array types.
+uint8_t om_get_bytes_per_element_compressed(OmDataType_t data_type, OmCompression_t compression, OmError_t* error);
 
 /// Divide and round up
 #define divide_rounded_up(dividend,divisor) \
