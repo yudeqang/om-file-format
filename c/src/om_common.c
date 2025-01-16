@@ -28,6 +28,16 @@ const char* om_error_string(OmError_t error) {
             return "Not an OM file";
         case ERROR_DEFLATED_SIZE_MISMATCH:
             return "Corrupted data: Deflated size does not match";
+        case ERROR_INVALID_DIMENSIONS:
+            return "Invalid dimensions";
+        case ERROR_INVALID_CHUNK_DIMENSIONS:
+            return "Invalid chunk dimensions";
+        case ERROR_INVALID_READ_OFFSET:
+            return "Invalid read offset dimensions";
+        case ERROR_INVALID_READ_COUNT:
+            return "Invalid read count dimensions";
+        case ERROR_INVALID_CUBE_OFFSET:
+            return "Invalid read cube offset dimensions";
     }
     return "";
 }

@@ -80,6 +80,23 @@ OmError_t om_decoder_init(
     // Calculate the number of chunks based on dims and chunks
     uint64_t nChunks = 1;
     for (uint64_t i = 0; i < dimension_count; i++) {
+        if (dimensions[i] == 0) {
+            return ERROR_INVALID_DIMENSIONS;
+        }
+        if (chunks[i] == 0 || chunks[i] > dimensions[i]) {
+            return ERROR_INVALID_CHUNK_DIMENSIONS;
+        }
+        if (read_offset[i] >= dimensions[i]) {
+            return ERROR_INVALID_READ_OFFSET;
+        }
+        if (read_count[i] > dimensions[i] || read_offset[i] + read_count[i] > dimensions[i]) {
+            return ERROR_INVALID_READ_COUNT;
+        }
+        const uint64_t cube_offset = decoder->cube_offset == NULL ? 0 : decoder->cube_offset[i];
+        const uint64_t cube_dimension = decoder->cube_dimensions == NULL ? read_count[i] : decoder->cube_dimensions[i];
+        if (cube_offset >= dimensions[i] || cube_offset + read_count[i] > cube_dimension) {
+            return ERROR_INVALID_CUBE_OFFSET;
+        }
         nChunks *= divide_rounded_up(dimensions[i], chunks[i]);
     }
 
@@ -487,6 +504,8 @@ bool om_decoder_next_data_read(const OmDecoder_t *decoder, OmDecoder_dataRead_t*
 
     uint64_t chunkIndex = data_read->nextChunk.lowerBound;
     data_read->chunkIndex.lowerBound = chunkIndex;
+    
+    const uint64_t number_of_chunks = decoder->number_of_chunks;
 
     // Version 1 case
     if (decoder->lut_chunk_length == 0) {
@@ -542,7 +561,7 @@ bool om_decoder_next_data_read(const OmDecoder_t *decoder, OmDecoder_dataRead_t*
         // Old files do not compress LUT and data is after LUT
         // V1 header size
         const uint64_t om_header_v1_length = sizeof(OmHeaderV1_t);
-        const uint64_t dataStart = om_header_v1_length + decoder->number_of_chunks * sizeof(int64_t);
+        const uint64_t dataStart = om_header_v1_length + number_of_chunks * sizeof(int64_t);
 
         data_read->offset = startPos + dataStart;
         data_read->count = endPos - startPos;
@@ -564,9 +583,9 @@ bool om_decoder_next_data_read(const OmDecoder_t *decoder, OmDecoder_dataRead_t*
 
     // Uncompress the first LUT index chunk and check the length
     {
-        const uint64_t thisLutChunkElementCount = min((lutChunk + 1) * LUT_CHUNK_COUNT, decoder->number_of_chunks+1) - lutChunk * LUT_CHUNK_COUNT;
+        const size_t thisLutChunkElementCount = min((lutChunk + 1) * LUT_CHUNK_COUNT, number_of_chunks+1) - lutChunk * LUT_CHUNK_COUNT;
         const uint64_t start = lutChunk * lutChunkLength - lutOffset;
-        if (start + lutChunkLength > index_data_size) {
+        if (start + lutChunkLength > index_data_size || thisLutChunkElementCount > LUT_CHUNK_COUNT) {
             (*error) = ERROR_OUT_OF_BOUND_READ;
             return false;
         }
@@ -585,9 +604,9 @@ bool om_decoder_next_data_read(const OmDecoder_t *decoder, OmDecoder_dataRead_t*
 
         // Maybe the next LUT chunk needs to be uncompressed
         if (nextLutChunk != lutChunk) {
-            const uint64_t nextLutChunkElementCount = min((nextLutChunk + 1) * LUT_CHUNK_COUNT, decoder->number_of_chunks+1) - nextLutChunk * LUT_CHUNK_COUNT;
+            const size_t nextLutChunkElementCount = min((nextLutChunk + 1) * LUT_CHUNK_COUNT, number_of_chunks+1) - nextLutChunk * LUT_CHUNK_COUNT;
             const uint64_t start = nextLutChunk * lutChunkLength - lutOffset;
-            if (start + lutChunkLength > index_data_size) {
+            if (start + lutChunkLength > index_data_size || nextLutChunkElementCount > LUT_CHUNK_COUNT) {
                 (*error) = ERROR_OUT_OF_BOUND_READ;
                 return false;
             }
@@ -658,8 +677,8 @@ uint64_t _om_decoder_decode_chunk(
         const uint64_t chunk = decoder->chunks[i];
         const uint64_t read_offset = decoder->read_offset[i];
         const uint64_t read_count = decoder->read_count[i];
-        const uint64_t cube_offset = decoder->cube_offset[i];
-        const uint64_t cube_dimension = decoder->cube_dimensions[i];
+        const uint64_t cube_offset = decoder->cube_offset == NULL ? 0 : decoder->cube_offset[i];
+        const uint64_t cube_dimension = decoder->cube_dimensions == NULL ? read_count : decoder->cube_dimensions[i];
 
         const uint64_t nChunksInThisDimension = divide_rounded_up(dimension, chunk);
         const uint64_t c0 = (chunkIndex / rollingMultiply) % nChunksInThisDimension;
@@ -750,7 +769,7 @@ uint64_t _om_decoder_decode_chunk(
             const uint64_t chunk = decoder->chunks[i];
             const uint64_t read_offset = decoder->read_offset[i];
             const uint64_t read_count = decoder->read_count[i];
-            const uint64_t cube_dimension = decoder->cube_dimensions[i];
+            const uint64_t cube_dimension = decoder->cube_dimensions == NULL ? read_count : decoder->cube_dimensions[i];
 
             //printf("i=%d q=%d d=%d\n", i,q,d);
             const uint64_t nChunksInThisDimension = divide_rounded_up(dimension, chunk);
