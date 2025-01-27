@@ -54,17 +54,17 @@ import Foundation
             #expect(valueOut == 177)
         })
     }
-
-    @Test func inMemory() throws {
+    
+    /*@Test func inMemory() throws {
         let data: [Float] = [0.0, 5.0, 2.0, 3.0, 2.0, 5.0, 6.0, 2.0, 8.0, 3.0, 10.0, 14.0, 12.0, 15.0, 14.0, 15.0, 66.0, 17.0, 12.0, 19.0, 20.0, 21.0, 22.0, 23.0, 24.0]
         let compressed = try OmFileWriter(dim0: 1, dim1: data.count, chunk0: 1, chunk1: 10).writeInMemory(compressionType: .pfor_delta2d_int16, scalefactor: 1, all: data)
         #expect(compressed.count == 212)
         let uncompressed = try OmFileReader(fn: DataAsClass(data: compressed)).readAll()
         #expect(data == uncompressed)
-    }
+    }*/
 
     /// Make sure the last chunk has the correct number of chunks
-    @Test func writeMoreDataThenExpected() throws {
+    /*@Test func writeMoreDataThenExpected() throws {
         let file = "writeMoreDataThenExpected.om"
         try FileManager.default.removeItemIfExists(at: file)
         #expect(throws: (any Error).self) { try OmFileWriter(dim0: 5, dim1: 5, chunk0: 2, chunk1: 2).write(file: file, compressionType: .pfor_delta2d_int16, scalefactor: 1, overwrite: false, supplyChunk: { dim0pos in
@@ -81,14 +81,14 @@ import Foundation
             fatalError("Not expected")
         }) }
         try FileManager.default.removeItem(atPath: "\(file)~")
-    }
-
+    }*/
+    
     @Test func writeLarge() async throws {
         let file = "writeLarge.om"
-        try FileManager.default.removeItemIfExists(at: file)
-        let fn = try FileHandle.createNewFile(file: file)
-
-        let fileWriter = OmFileWriter2(fn: fn, initialCapacity: 8)
+        let fn = try FileHandle.createNewFile(file: file, overwrite: true)
+        defer { try? FileManager.default.removeItem(atPath: file) }
+        
+        let fileWriter = OmFileWriter(fn: fn, initialCapacity: 8)
         let writer = try fileWriter.prepareArray(type: Float.self, dimensions: [100,100,10], chunkDimensions: [2,2,2], compression: .pfor_delta2d_int16, scale_factor: 1, add_offset: 0)
 
         let data = (0..<100000).map({Float($0 % 10000)})
@@ -98,8 +98,8 @@ import Foundation
         try fileWriter.writeTrailer(rootVariable: variable)
 
         let readFn = try MmapFile(fn: FileHandle.openFileReading(file: file))
-        let read = try OmFileReader2(fn: readFn).asArray(of: Float.self)!
-
+        let read = try OmFileReader(fn: readFn).asArray(of: Float.self)!
+        
         let a1 = try read.read(range: [50..<51, 20..<21, 1..<2])
         #expect(a1 == [201.0])
 
@@ -109,17 +109,42 @@ import Foundation
         #expect(readFn.count == 154176)
         //let hex = Data(bytesNoCopy: UnsafeMutableRawPointer(mutating: readFn.getData(offset: 0, count: readFn.count)), count: readFn.count, deallocator: .none)
         //XCTAssertEqual(hex, "awfawf")
+    }
+    
+    @Test func writeLargeAsync() async throws {
+        let file = "writeLargeAsync.om"
+        let fn = try FileHandle.createNewFile(file: file, overwrite: true)
+        defer { try? FileManager.default.removeItem(atPath: file) }
+        
+        let fileWriter = OmFileWriter(fn: fn, initialCapacity: 8)
+        let writer = try fileWriter.prepareArray(type: Float.self, dimensions: [100,100,10], chunkDimensions: [2,2,2], compression: .pfor_delta2d_int16, scale_factor: 1, add_offset: 0)
 
-        try FileManager.default.removeItem(atPath: file)
+        let data = (0..<100000).map({Float($0 % 10000)})
+        try writer.writeData(array: data)
+        let variableMeta = try writer.finalise()
+        let variable = try fileWriter.write(array: variableMeta, name: "data", children: [])
+        try fileWriter.writeTrailer(rootVariable: variable)
+
+        let readFn = try FileHandle.openFileReading(file: file)
+        let read = try await OmFileReaderAsync(fn: readFn).asArray(of: Float.self)!
+        
+        let a1 = try await read.read(range: [50..<51, 20..<21, 1..<2])
+        #expect(a1 == [201.0])
+
+        let a = try await read.readConcurrent(range: [0..<100, 0..<100, 0..<10])
+        #expect(a == data)
+
+        #expect(try await readFn.getCount() == 154176)
+        //let hex = Data(bytesNoCopy: UnsafeMutableRawPointer(mutating: readFn.getData(offset: 0, count: readFn.count)), count: readFn.count, deallocator: .none)
+        //XCTAssertEqual(hex, "awfawf")
     }
 
     @Test func writeChunks() throws {
         let file = "writeChunks.om"
-        try FileManager.default.removeItemIfExists(at: file)
-
-        let fn = try FileHandle.createNewFile(file: file)
-        let fileWriter = OmFileWriter2(fn: fn, initialCapacity: 8)
-
+        let fn = try FileHandle.createNewFile(file: file, overwrite: true)
+        defer { try? FileManager.default.removeItem(atPath: file) }
+        let fileWriter = OmFileWriter(fn: fn, initialCapacity: 8)
+        
         let writer = try fileWriter.prepareArray(type: Float.self, dimensions: [5,5], chunkDimensions: [2,2], compression: .pfor_delta2d_int16, scale_factor: 1, add_offset: 0)
 
         // Directly feed individual chunks
@@ -137,8 +162,8 @@ import Foundation
         try fileWriter.writeTrailer(rootVariable: variable)
 
         let readFn = try MmapFile(fn: FileHandle.openFileReading(file: file))
-        let read = try OmFileReader2(fn: readFn).asArray(of: Float.self)!
-
+        let read = try OmFileReader(fn: readFn).asArray(of: Float.self)!
+        
         let a = try read.read(range: [0..<5, 0..<5])
         #expect(a == [0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0, 17.0, 18.0, 19.0, 20.0, 21.0, 22.0, 23.0, 24.0])
 
@@ -146,17 +171,14 @@ import Foundation
         //let bytes = Data(bytesNoCopy: UnsafeMutableRawPointer(mutating: readFn.getData(offset: 0, count: readFn.count)), count: readFn.count, deallocator: .none).map{UInt8($0)}
         // difference on x86 and ARM cause by the underlying compression
         //XCTAssertTrue(bytes == [79, 77, 3, 0, 4, 130, 0, 2, 3, 34, 0, 4, 194, 2, 10, 4, 178, 0, 12, 4, 242, 0, 14, 197, 17, 20, 194, 2, 22, 194, 2, 24, 3, 3, 228, 200, 109, 1, 0, 0, 20, 0, 4, 0, 0, 0, 0, 0, 6, 0, 0, 0, 0, 0, 0, 0, 32, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 128, 63, 0, 0, 0, 0, 5, 0, 0, 0, 0, 0, 0, 0, 5, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 100, 97, 116, 97, 0, 0, 0, 0, 79, 77, 3, 0, 0, 0, 0, 0, 40, 0, 0, 0, 0, 0, 0, 0, 76, 0, 0, 0, 0, 0, 0, 0] || bytes == [79, 77, 3, 0, 4, 130, 64, 2, 3, 34, 16, 4, 194, 2, 10, 4, 178, 64, 12, 4, 242, 64, 14, 197, 17, 20, 194, 2, 22, 194, 2, 24, 3, 3, 228, 200, 109, 1, 0, 0, 20, 0, 4, 0, 0, 0, 0, 0, 6, 0, 0, 0, 0, 0, 0, 0, 32, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 128, 63, 0, 0, 0, 0, 5, 0, 0, 0, 0, 0, 0, 0, 5, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 100, 97, 116, 97, 0, 0, 0, 0, 79, 77, 3, 0, 0, 0, 0, 0, 40, 0, 0, 0, 0, 0, 0, 0, 76, 0, 0, 0, 0, 0, 0, 0])
-
-        try FileManager.default.removeItem(atPath: file)
     }
 
     @Test func offsetWrite() throws {
         let file = "offsetWrite.om"
-        try FileManager.default.removeItemIfExists(at: file)
-
-        let fn = try FileHandle.createNewFile(file: file)
-        let fileWriter = OmFileWriter2(fn: fn, initialCapacity: 8)
-
+        let fn = try FileHandle.createNewFile(file: file, overwrite: true)
+        defer { try? FileManager.default.removeItem(atPath: file) }
+        let fileWriter = OmFileWriter(fn: fn, initialCapacity: 8)
+        
         let writer = try fileWriter.prepareArray(type: Float.self, dimensions: [5,5], chunkDimensions: [2,2], compression: .pfor_delta2d_int16, scale_factor: 1, add_offset: 0)
 
         /// Deliberately add NaN on all positions that should not be written to the file. Only the inner 5x5 array is written
@@ -168,7 +190,7 @@ import Foundation
         try fileWriter.writeTrailer(rootVariable: variable)
 
         let readFn = try MmapFile(fn: FileHandle.openFileReading(file: file))
-        let readFile = try OmFileReader2(fn: readFn)
+        let readFile = try OmFileReader(fn: readFn)
         let read = readFile.asArray(of: Float.self)!
         #expect(readFile.dataType == .float_array)
         #expect(read.compression == .pfor_delta2d_int16)
@@ -182,20 +204,18 @@ import Foundation
 
         let a = try read.read(range: [0..<5, 0..<5])
         #expect(a == [0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0, 17.0, 18.0, 19.0, 20.0, 21.0, 22.0, 23.0, 24.0])
-
-        try FileManager.default.removeItem(atPath: file)
     }
 
     @Test func write3D() throws {
         let file = "write3D.om"
-        try FileManager.default.removeItemIfExists(at: file)
-
+        
         let dims = [UInt64(3),3,3]
         let data = [Float(0.0), 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0, 17.0, 18.0, 19.0, 20.0, 21.0, 22.0, 23.0, 24.0, 25.0, 26.0]
-
-        let fn = try FileHandle.createNewFile(file: file)
-        let fileWriter = OmFileWriter2(fn: fn, initialCapacity: 8)
-
+        
+        let fn = try FileHandle.createNewFile(file: file, overwrite: true)
+        defer { try? FileManager.default.removeItem(atPath: file) }
+        let fileWriter = OmFileWriter(fn: fn, initialCapacity: 8)
+        
         let writer = try fileWriter.prepareArray(type: Float.self, dimensions: dims, chunkDimensions: [2,2,2], compression: .pfor_delta2d_int16, scale_factor: 1, add_offset: 0)
         try writer.writeData(array: data)
         let variableMeta = try writer.finalise()
@@ -207,7 +227,7 @@ import Foundation
         try fileWriter.writeTrailer(rootVariable: variable)
 
         let readFn = try MmapFile(fn: FileHandle.openFileReading(file: file))
-        let readFile = try OmFileReader2(fn: readFn)
+        let readFile = try OmFileReader(fn: readFn)
         let read = readFile.asArray(of: Float.self)!
 
         #expect(readFile.numberOfChildren == 2)
@@ -235,32 +255,36 @@ import Foundation
         #expect(readFn.count == 240)
         let bytes = Data(bytesNoCopy: UnsafeMutableRawPointer(mutating: readFn.getData(offset: 0, count: readFn.count)), count: readFn.count, deallocator: .none).map{UInt8($0)}
         #expect(bytes[0..<3] == [79, 77, 3])
-        #expect(bytes[3..<8] == [0, 3, 34, 140, 2]) // chunk // chunk
-        #expect(bytes[8..<12] == [2, 3, 114, 1] || bytes[8..<12] == [2, 3, 114, 141]) // difference on x86 and ARM cause by the underlying compression // difference on x86 and ARM cause by the underlying compression
-        #expect(bytes[12..<16] == [6, 3, 34, 0] || bytes[12..<16] == [6, 3, 34, 140]) // chunk // chunk
-        #expect(bytes[16..<19] == [8, 194, 2]) // chunk // chunk
-        #expect(bytes[19..<23] == [18, 5, 226, 3]) // chunk // chunk
-        #expect(bytes[23..<26] == [20, 198, 33]) // chunk // chunk
-        #expect(bytes[26..<29] == [24, 194, 2]) // chunk // chunk
+        #expect(bytes[3..<8] == [0, 3, 34, 140, 2]) // chunk
+        #expect(bytes[8..<12] == [2, 3, 114, 1] || bytes[8..<12] == [2, 3, 114, 141]) // difference on x86 and ARM cause by the underlying compression
+        #expect(bytes[12..<16] == [6, 3, 34, 0] || bytes[12..<16] == [6, 3, 34, 140]) // chunk
+        #expect(bytes[16..<19] == [8, 194, 2]) // chunk
+        #expect(bytes[19..<23] == [18, 5, 226, 3]) // chunk
+        #expect(bytes[23..<26] == [20, 198, 33]) // chunk
+        #expect(bytes[26..<29] == [24, 194, 2]) // chunk
         #expect(bytes[29..<30] == [26]) // chunk // chunk
-        #expect(bytes[30..<35] == [3, 3, 37, 199, 45]) // lut // lut
-        #expect(bytes[35..<40] == [0, 0, 0, 0, 0]) // zero padding // zero padding
-        #expect(bytes[40..<40+17] == [5, 4, 5, 0, 0, 0, 0, 0, 82, 9, 188, 0, 105, 110, 116, 51, 50]) // scalar int32 // scalar int32
-        #expect(bytes[65..<65+22] == [4, 6, 0, 0, 0, 0, 0, 0, 0, 0, 64, 42, 129, 103, 65, 100, 111, 117, 98, 108, 101, 0]) // scalar double // scalar double
+        #expect(bytes[30..<35] == [3, 3, 37, 199, 45]) // lut
+        #expect(bytes[35..<40] == [0, 0, 0, 0, 0]) // zero padding
+        #expect(bytes[40..<40+17] == [5, 4, 5, 0, 0, 0, 0, 0, 82, 9, 188, 0, 105, 110, 116, 51, 50]) // scalar int32
+        #expect(bytes[65..<65+22] == [4, 6, 0, 0, 0, 0, 0, 0, 0, 0, 64, 42, 129, 103, 65, 100, 111, 117, 98, 108, 101, 0]) // scalar double
         #expect(bytes[88..<88+124] == [20, 0, 4, 0, 2, 0, 0, 0, 5, 0, 0, 0, 0, 0, 0, 0, 30, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 128, 63, 0, 0, 0, 0, 17, 0, 0, 0, 0, 0, 0, 0, 22, 0, 0, 0, 0, 0, 0, 0, 40, 0, 0, 0, 0, 0, 0, 0, 64, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 100, 97, 116, 97]) // array meta // array meta
-        #expect(bytes[216..<240] == [79, 77, 3, 0, 0, 0, 0, 0, 88, 0, 0, 0, 0, 0, 0, 0, 124, 0, 0, 0, 0, 0, 0, 0]) // trailer // trailer
+        #expect(bytes[216..<240] == [79, 77, 3, 0, 0, 0, 0, 0, 88, 0, 0, 0, 0, 0, 0, 0, 124, 0, 0, 0, 0, 0, 0, 0]) // trailer
 
-        try FileManager.default.removeItem(atPath: file)
+        // Test interpolation
+        #expect(try read.readInterpolated(dim0X: 0, dim0XFraction: 0.5, dim0Y: 0, dim0YFraction: 0.5, dim0Nx: 3, dim1: 0..<3) == [6.0, 7.0, 8.0])
+        #expect(try read.readInterpolated(dim0X: 0, dim0XFraction: 0.1, dim0Y: 0, dim0YFraction: 0.2, dim0Nx: 3, dim1: 0..<3) == [2.1, 3.1000001, 4.1])
+        #expect(try read.readInterpolated(dim0X: 0, dim0XFraction: 0.9, dim0Y: 0, dim0YFraction: 0.2, dim0Nx: 3, dim1: 0..<3) == [4.5, 5.5, 6.5])
+        #expect(try read.readInterpolated(dim0X: 0, dim0XFraction: 0.1, dim0Y: 0, dim0YFraction: 0.9, dim0Nx: 3, dim1: 0..<3) == [8.4, 9.4, 10.400001])
+        #expect(try read.readInterpolated(dim0X: 0, dim0XFraction: 0.8, dim0Y: 0, dim0YFraction: 0.9, dim0Nx: 3, dim1: 0..<3) == [10.5, 11.5, 12.5])
     }
 
     @Test func writev3() throws {
         let file = "writev3.om"
-        try FileManager.default.removeItemIfExists(at: file)
-
         let dims = [UInt64(5),5]
-        let fn = try FileHandle.createNewFile(file: file)
-        let fileWriter = OmFileWriter2(fn: fn, initialCapacity: 8)
-
+        let fn = try FileHandle.createNewFile(file: file, overwrite: true)
+        defer { try? FileManager.default.removeItem(atPath: file) }
+        let fileWriter = OmFileWriter(fn: fn, initialCapacity: 8)
+        
         let writer = try fileWriter.prepareArray(type: Float.self, dimensions: dims, chunkDimensions: [2,2], compression: .pfor_delta2d_int16, scale_factor: 1, add_offset: 0)
 
         let data = [Float(0.0), 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0, 17.0, 18.0, 19.0, 20.0, 21.0, 22.0, 23.0, 24.0]
@@ -270,8 +294,8 @@ import Foundation
         try fileWriter.writeTrailer(rootVariable: variable)
 
         let readFn = try MmapFile(fn: FileHandle.openFileReading(file: file))
-        let read = try OmFileReader2(fn: readFn).asArray(of: Float.self)!
-
+        let read = try OmFileReader(fn: readFn).asArray(of: Float.self)!
+        
 
         let a = try read.read(range: [0..<5, 0..<5])
         #expect(a == [0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0, 17.0, 18.0, 19.0, 20.0, 21.0, 22.0, 23.0, 24.0])
@@ -334,24 +358,22 @@ import Foundation
         #expect(readFn.count == 144)
         let bytes = Data(bytesNoCopy: UnsafeMutableRawPointer(mutating: readFn.getData(offset: 0, count: readFn.count)), count: readFn.count, deallocator: .none).map{UInt8($0)}
         #expect(bytes == [79, 77, 3, 0, 4, 130, 0, 2, 3, 34, 0, 4, 194, 2, 10, 4, 178, 0, 12, 4, 242, 0, 14, 197, 17, 20, 194, 2, 22, 194, 2, 24, 3, 3, 228, 200, 109, 1, 0, 0, 20, 0, 4, 0, 0, 0, 0, 0, 6, 0, 0, 0, 0, 0, 0, 0, 32, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 128, 63, 0, 0, 0, 0, 5, 0, 0, 0, 0, 0, 0, 0, 5, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 100, 97, 116, 97, 0, 0, 0, 0, 79, 77, 3, 0, 0, 0, 0, 0, 40, 0, 0, 0, 0, 0, 0, 0, 76, 0, 0, 0, 0, 0, 0, 0])
-
-        /*// test interpolation
-        XCTAssertEqualArray(try read.readInterpolated(dim0X: 0, dim0XFraction: 0.5, dim0Y: 0, dim0YFraction: 0.5, dim0Nx: 2, dim1: 0..<5), [7.5, 8.5, 9.5, 10.5, 11.5], accuracy: 0.001)
-        XCTAssertEqualArray(try read.readInterpolated(dim0X: 0, dim0XFraction: 0.1, dim0Y: 0, dim0YFraction: 0.2, dim0Nx: 2, dim1: 0..<5), [2.5, 3.4999998, 4.5, 5.5, 6.5], accuracy: 0.001)
-        XCTAssertEqualArray(try read.readInterpolated(dim0X: 0, dim0XFraction: 0.9, dim0Y: 0, dim0YFraction: 0.2, dim0Nx: 2, dim1: 0..<5), [6.5, 7.5, 8.5, 9.5, 10.5], accuracy: 0.001)
-        XCTAssertEqualArray(try read.readInterpolated(dim0X: 0, dim0XFraction: 0.1, dim0Y: 0, dim0YFraction: 0.9, dim0Nx: 2, dim1: 0..<5), [9.5, 10.499999, 11.499999, 12.5, 13.499999], accuracy: 0.001)
-        XCTAssertEqualArray(try read.readInterpolated(dim0X: 0, dim0XFraction: 0.8, dim0Y: 0, dim0YFraction: 0.9, dim0Nx: 2, dim1: 0..<5), [12.999999, 14.0, 15.0, 16.0, 17.0], accuracy: 0.001)*/
-        try FileManager.default.removeItem(atPath: file)
+        
+        // test interpolation
+        #expect(try read.readInterpolated(dim0X: 0, dim0XFraction: 0.5, dim0Y: 0, dim0YFraction: 0.5, dim0Nx: 2, dim1: 0..<5) == [7.5, 8.5, 9.5, 10.5, 11.5])
+        #expect(try read.readInterpolated(dim0X: 0, dim0XFraction: 0.1, dim0Y: 0, dim0YFraction: 0.2, dim0Nx: 2, dim1: 0..<5) == [2.5, 3.4999998, 4.5, 5.5, 6.5])
+        #expect(try read.readInterpolated(dim0X: 0, dim0XFraction: 0.9, dim0Y: 0, dim0YFraction: 0.2, dim0Nx: 2, dim1: 0..<5) == [6.5, 7.5, 8.5, 9.5, 10.5])
+        #expect(try read.readInterpolated(dim0X: 0, dim0XFraction: 0.1, dim0Y: 0, dim0YFraction: 0.9, dim0Nx: 2, dim1: 0..<5) == [9.5, 10.499999, 11.499999, 12.5, 13.499999])
+        #expect(try read.readInterpolated(dim0X: 0, dim0XFraction: 0.8, dim0Y: 0, dim0YFraction: 0.9, dim0Nx: 2, dim1: 0..<5) == [12.999999, 14.0, 15.0, 16.0, 17.0])
     }
 
     @Test func writev3MaxIOLimit() throws {
         let file = "writev3MaxIOLimit.om"
-        try FileManager.default.removeItemIfExists(at: file)
-
         let dims = [UInt64(5),5]
-        let fn = try FileHandle.createNewFile(file: file)
-        let fileWriter = OmFileWriter2(fn: fn, initialCapacity: 8)
-
+        let fn = try FileHandle.createNewFile(file: file, overwrite: true)
+        defer { try? FileManager.default.removeItem(atPath: file) }
+        let fileWriter = OmFileWriter(fn: fn, initialCapacity: 8)
+        
         let writer = try fileWriter.prepareArray(type: Float.self, dimensions: dims, chunkDimensions: [2,2], compression: .pfor_delta2d_int16, scale_factor: 1, add_offset: 0)
 
         let data = [Float(0.0), 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0, 17.0, 18.0, 19.0, 20.0, 21.0, 22.0, 23.0, 24.0]
@@ -361,8 +383,8 @@ import Foundation
         try fileWriter.writeTrailer(rootVariable: variable)
 
         let readFn = try MmapFile(fn: FileHandle.openFileReading(file: file))
-        let read = try OmFileReader2(fn: readFn).asArray(of: Float.self, io_size_max: 0, io_size_merge: 0)!
-
+        let read = try OmFileReader(fn: readFn).asArray(of: Float.self, io_size_max: 0, io_size_merge: 0)!
+        
 
         let a = try read.read(range: [0..<5, 0..<5])
         #expect(a == [0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0, 17.0, 18.0, 19.0, 20.0, 21.0, 22.0, 23.0, 24.0])
@@ -421,17 +443,9 @@ import Foundation
         for x in 0..<dims[0] {
             #expect(try read.read(range: [0..<5, x..<x+1]) == [Float(x), Float(x+5), Float(x+10), Float(x+15), Float(x+20)])
         }
-
-        /*// test interpolation
-        XCTAssertEqualArray(try read.readInterpolated(dim0X: 0, dim0XFraction: 0.5, dim0Y: 0, dim0YFraction: 0.5, dim0Nx: 2, dim1: 0..<5), [7.5, 8.5, 9.5, 10.5, 11.5], accuracy: 0.001)
-        XCTAssertEqualArray(try read.readInterpolated(dim0X: 0, dim0XFraction: 0.1, dim0Y: 0, dim0YFraction: 0.2, dim0Nx: 2, dim1: 0..<5), [2.5, 3.4999998, 4.5, 5.5, 6.5], accuracy: 0.001)
-        XCTAssertEqualArray(try read.readInterpolated(dim0X: 0, dim0XFraction: 0.9, dim0Y: 0, dim0YFraction: 0.2, dim0Nx: 2, dim1: 0..<5), [6.5, 7.5, 8.5, 9.5, 10.5], accuracy: 0.001)
-        XCTAssertEqualArray(try read.readInterpolated(dim0X: 0, dim0XFraction: 0.1, dim0Y: 0, dim0YFraction: 0.9, dim0Nx: 2, dim1: 0..<5), [9.5, 10.499999, 11.499999, 12.5, 13.499999], accuracy: 0.001)
-        XCTAssertEqualArray(try read.readInterpolated(dim0X: 0, dim0XFraction: 0.8, dim0Y: 0, dim0YFraction: 0.9, dim0Nx: 2, dim1: 0..<5), [12.999999, 14.0, 15.0, 16.0, 17.0], accuracy: 0.001)*/
-        try FileManager.default.removeItem(atPath: file)
     }
-
-    @Test func oldWriterNewReader() throws {
+    
+    /*@Test func oldWriterNewReader() throws {
         let file = "oldWriterNewReader.om"
         try FileManager.default.removeItemIfExists(at: file)
 
@@ -451,8 +465,8 @@ import Foundation
 
         let io_size_max: UInt64 = 1000000
         let io_size_merge: UInt64 = 100000
-
-        let read = try OmFileReader2(fn: try MmapFile(fn: fn)).asArray(of: Float.self, io_size_max: io_size_max, io_size_merge: io_size_merge)!
+        
+        let read = try OmFileReader(fn: try MmapFile(fn: fn)).asArray(of: Float.self, io_size_max: io_size_max, io_size_merge: io_size_merge)!
         let dims = read.getDimensions()
         let a = try read.read(range: [0..<5, 0..<5])
         #expect(a == [0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0, 17.0, 18.0, 19.0, 20.0, 21.0, 22.0, 23.0, 24.0])
@@ -512,10 +526,10 @@ import Foundation
             #expect(try read.read(range: [0..<5, x..<x+1]) == [Float(x), Float(x+5), Float(x+10), Float(x+15), Float(x+20)])
         }
         try FileManager.default.removeItem(atPath: file)
-    }
-
-
-    @Test func write() throws {
+    }*/
+    
+    
+    /*@Test func write() throws {
         let file = "write.om"
         try FileManager.default.removeItemIfExists(at: file)
 
@@ -588,9 +602,9 @@ import Foundation
         #expect(try read.readInterpolated(dim0X: 0, dim0XFraction: 0.1, dim0Y: 0, dim0YFraction: 0.9, dim0Nx: 2, dim1: 0..<5) == [9.5, 10.499999, 11.499999, 12.5, 13.499999])
         #expect(try read.readInterpolated(dim0X: 0, dim0XFraction: 0.8, dim0Y: 0, dim0YFraction: 0.9, dim0Nx: 2, dim1: 0..<5) == [12.999999, 14.0, 15.0, 16.0, 17.0])
         try FileManager.default.removeItem(atPath: file)
-    }
-
-    @Test func naN() throws {
+    }*/
+    
+    /*@Test func naN() throws {
         let file = "naN.om"
         try FileManager.default.removeItemIfExists(at: file)
 
@@ -602,9 +616,9 @@ import Foundation
         print(data2)
         #expect(try read.read(dim0Slow: 1..<2, dim1: 1..<2)[0].isNaN)
         try FileManager.default.removeItem(atPath: file)
-    }
-
-    @Test func writeFpx() throws {
+    }*/
+    
+    /*@Test func writeFpx() throws {
         let file = "writeFpx.om"
         try FileManager.default.removeItemIfExists(at: file)
 
@@ -670,9 +684,9 @@ import Foundation
             #expect(try read.read(dim0Slow: 0..<5, dim1: x..<x+1) == [Float(x), Float(x+5), Float(x+10), Float(x+15), Float(x+20)])
         }
         try FileManager.default.removeItem(atPath: file)
-    }
-
-    @Test func naNfpx() throws {
+    }*/
+    
+    /*@Test func naNfpx() throws {
         let file = "naNfpx.om"
         try FileManager.default.removeItemIfExists(at: file)
 
@@ -684,7 +698,7 @@ import Foundation
         print(data2)
         #expect(try read.read(dim0Slow: 1..<2, dim1: 1..<2)[0].isNaN)
         try FileManager.default.removeItem(atPath: file)
-    }
+    }*/
 
     @Test func readWriteRoundTripArrayTypes() throws {
 
@@ -695,14 +709,11 @@ import Foundation
 
             func test() throws {
                 let file = "test_file_\(T.self).om"
-                try FileManager.default.removeItemIfExists(at: file)
-
                 do {
-                    defer { try? FileManager.default.removeItemIfExists(at: file) }
-
                     // Write file
-                    let fn = try FileHandle.createNewFile(file: file)
-                    let fileWriter = OmFileWriter2(fn: fn, initialCapacity: 8)
+                    let fn = try FileHandle.createNewFile(file: file, overwrite: true)
+                    defer { try? FileManager.default.removeItem(atPath: file) }
+                    let fileWriter = OmFileWriter(fn: fn, initialCapacity: 8)
 
                     let count = Int(dimensions.reduce(1, *))
                     let values = (0..<count).map { _ in generateValue() }
@@ -722,7 +733,7 @@ import Foundation
 
                     // Read and verify
                     let readFn = try MmapFile(fn: FileHandle.openFileReading(file: file))
-                    let readFile = try OmFileReader2(fn: readFn)
+                    let readFile = try OmFileReader(fn: readFn)
 
                     let array = readFile.asArray(of: T.self)!
                     #expect(array.getDimensions()[0] == dimensions[0])
@@ -754,6 +765,7 @@ import Foundation
         try TestCase<UInt32>.init() { UInt32.random(in: 0..<UInt32.max) }.test()
         try TestCase<UInt>.init() { UInt.random(in: 0..<UInt.max) }.test()
     }
+
 
     @Test func copyLog10Roundtrip() {
         let ints: [Int16] = [100, 200, 300, 400, 500]

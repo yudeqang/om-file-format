@@ -12,7 +12,7 @@ import Foundation
 /// Decodes meta data which may include JSON
 /// Handles actual file reads. The current implementation just uses MMAP or plain memory.
 /// Later implementations may use async read operations
-public struct OmFileReader2<Backend: OmFileReaderBackend> {
+public struct OmFileReader<Backend: OmFileReaderBackend> {
     /// Points to the underlying memory. Needs to remain in scope to keep memory accessible
     public let fn: Backend
     
@@ -73,7 +73,7 @@ public struct OmFileReader2<Backend: OmFileReaderBackend> {
         return om_variable_get_children_count(variable)
     }
     
-    public func getChild(_ index: UInt32) -> OmFileReader2<Backend>? {
+    public func getChild(_ index: UInt32) -> OmFileReader<Backend>? {
         var size: UInt64 = 0
         var offset: UInt64 = 0
         guard om_variable_get_children(variable, index, 1, &offset, &size) else {
@@ -82,7 +82,7 @@ public struct OmFileReader2<Backend: OmFileReaderBackend> {
         /// Read data from child.offset by child.size
         let dataChild = fn.getData(offset: Int(offset), count: Int(size))
         let childVariable = om_variable_init(dataChild)
-        return OmFileReader2(fn: fn, variable: childVariable)
+        return OmFileReader(fn: fn, variable: childVariable)
     }
     
     public func readScalar<OmType: OmFileScalarDataTypeProtocol>() -> OmType? {
@@ -99,11 +99,11 @@ public struct OmFileReader2<Backend: OmFileReaderBackend> {
     /// If it is an array of specified type. Return a type safe reader for this type
     /// `io_size_merge` The maximum size (in bytes) for merging consecutive IO operations. It helps to optimise read performance by merging small reads.
     /// `io_size_max` The maximum size (in bytes) for a single IO operation before it is split. It defines the threshold for splitting large reads.
-    public func asArray<OmType: OmFileArrayDataTypeProtocol>(of: OmType.Type, io_size_max: UInt64 = 65536, io_size_merge: UInt64 = 512) -> OmFileReader2Array<Backend, OmType>? {
+    public func asArray<OmType: OmFileArrayDataTypeProtocol>(of: OmType.Type, io_size_max: UInt64 = 65536, io_size_merge: UInt64 = 512) -> OmFileReaderArray<Backend, OmType>? {
         guard OmType.dataTypeArray == self.dataType else {
             return nil
         }
-        return OmFileReader2Array(
+        return OmFileReaderArray(
             fn: fn,
             variable: variable,
             io_size_max: io_size_max,
@@ -112,7 +112,7 @@ public struct OmFileReader2<Backend: OmFileReaderBackend> {
     }
 }
 
-extension OmFileReader2 where Backend == MmapFile {
+extension OmFileReader where Backend == MmapFile {
     public init(file: String) throws {
         let fn = try FileHandle.openFileReading(file: file)
         let mmap = try MmapFile(fn: fn)
@@ -124,7 +124,7 @@ extension OmFileReader2 where Backend == MmapFile {
 
 /// Represents a variable that is an array of a given type.
 /// The previous function `asArray(of: T)` instantiates this struct and ensures it is the correct type (e.g. a float array)
-public struct OmFileReader2Array<Backend: OmFileReaderBackend, OmType: OmFileArrayDataTypeProtocol> {
+public struct OmFileReaderArray<Backend: OmFileReaderBackend, OmType: OmFileArrayDataTypeProtocol> {
     /// Points to the underlying memory. Needs to remain in scope to keep memory accessible
     public let fn: Backend
     
