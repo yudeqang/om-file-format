@@ -50,6 +50,12 @@ Python bindings can be found in the repository [open-meteo/python-omfiles](https
 - Build web-interface to make the entire Open-Meteo weather database accessible with automatic Python code generation
 
 
+### File Layout
+The file begins with compressed data, followed by an index for locating individual chunks, then metadata, and finally an entrypoint. This layout allows for sequential file writing while supporting efficient random reads with minimal I/O operations, making it well-suited for cloud-native access.
+
+![](./docs/images/file_layout.png)
+
+
 ### Data Hierarchy Model:
 - The file trailer contains the position of the root `Variable`
 - Each `Variable` has a datatype and payload. E.g. Int16 has the number as 2-byte payload. An array stores the look-up-table position and array dimension information. The actual compressed array data, is stored at the beginning of the file.
