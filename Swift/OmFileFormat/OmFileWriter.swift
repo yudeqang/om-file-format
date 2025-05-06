@@ -36,7 +36,7 @@ public struct OmFileWriter<FileHandle: OmFileWriterBackend> {
             guard children.count <= UInt32.max else { fatalError() }
             let type = OmType.dataTypeScalar.toC()
             try buffer.alignTo64Bytes()
-            let size = om_variable_write_scalar_size(UInt16(name.count), UInt32(children.count), type, UInt64(name.count))
+            let size = om_variable_write_scalar_size(UInt16(name.count), UInt32(children.count), type, 0)
             let offset = UInt64(buffer.totalBytesWritten)
             try buffer.reallocate(minimumCapacity: Int(size))
             var value = value
