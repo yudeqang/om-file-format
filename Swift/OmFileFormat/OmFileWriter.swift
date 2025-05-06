@@ -34,43 +34,20 @@ public struct OmFileWriter<FileHandle: OmFileWriterBackend> {
         return try name.withUTF8{ name in
             guard name.count <= UInt16.max else { fatalError() }
             guard children.count <= UInt32.max else { fatalError() }
-            let childrenOffsets = children.map { $0.offset }
-            let childrenSizes = children.map { $0.size }
             let type = OmType.dataTypeScalar.toC()
-
             try buffer.alignTo64Bytes()
+            let size = om_variable_write_scalar_size(UInt16(name.count), UInt32(children.count), type)
             let offset = UInt64(buffer.totalBytesWritten)
-
-            let size = value.withOmBytes(body: { value in
-                return om_variable_write_scalar_size(
-                    UInt16(name.count),
-                    UInt32(children.count),
-                    type,
-                    UInt64(value.count)
-                )
-            })
-
             try buffer.reallocate(minimumCapacity: Int(size))
-            value.withOmBytes(body: { value in
-                om_variable_write_scalar(
-                    buffer.bufferAtWritePosition,
-                    UInt16(name.count),
-                    UInt32(children.count),
-                    childrenOffsets,
-                    childrenSizes,
-                    name.baseAddress,
-                    type,
-                    value.baseAddress,
-                    value.count
-                )
+            var value = value
+            withUnsafePointer(to: &value, { value in
+                let childrenOffsets = children.map {$0.offset}
+                let childrenSizes = children.map {$0.size}
+                om_variable_write_scalar(buffer.bufferAtWritePosition, UInt16(name.count), UInt32(children.count), childrenOffsets, childrenSizes, name.baseAddress, type, value)
             })
             buffer.incrementWritePosition(by: size)
             return OmOffsetSize(offset: offset, size: UInt64(size))
         }
-    }
-
-    public func writeNone(name: String, children: [OmOffsetSize]) throws -> OmOffsetSize {
-        return try write(value: OmNone(), name: name, children: children)
     }
 
     public func prepareArray<OmType: OmFileArrayDataTypeProtocol>(type: OmType.Type, dimensions: [UInt64], chunkDimensions: [UInt64], compression: CompressionType, scale_factor: Float, add_offset: Float) throws -> OmFileWriterArray<OmType, FileHandle> {
@@ -133,10 +110,10 @@ public final class OmFileWriterArray<OmType: OmFileArrayDataTypeProtocol, FileHa
     let compression: CompressionType
 
     /// The dimensions of the file
-    let dimensions: [UInt64]
+    var dimensions: [UInt64]
 
     /// How the dimensions are chunked
-    let chunks: [UInt64]
+    var chunks: [UInt64]
 
     let compressedChunkBufferSize: UInt64
 
@@ -149,9 +126,6 @@ public final class OmFileWriterArray<OmType: OmFileArrayDataTypeProtocol, FileHa
     public init(dimensions: [UInt64], chunkDimensions: [UInt64], compression: CompressionType, scale_factor: Float, add_offset: Float, buffer: OmBufferedWriter<FileHandle>) throws {
 
         assert(dimensions.count == chunkDimensions.count)
-        
-        var chunks = chunkDimensions
-        var dimensions = dimensions
 
         self.chunks = chunkDimensions
         self.dimensions = dimensions
@@ -161,7 +135,7 @@ public final class OmFileWriterArray<OmType: OmFileArrayDataTypeProtocol, FileHa
 
         // Note: The encoder keeps the pointer to `&self.dimensions`. It is important that this array is not deallocated!
         self.encoder = OmEncoder_t()
-        let error = om_encoder_init(&encoder, scale_factor, add_offset, compression.toC(), OmType.dataTypeArray.toC(), &dimensions, &chunks, UInt64(dimensions.count))
+        let error = om_encoder_init(&encoder, scale_factor, add_offset, compression.toC(), OmType.dataTypeArray.toC(), &self.dimensions, &self.chunks, UInt64(dimensions.count))
 
         guard error == ERROR_OK else {
             throw OmFileFormatSwiftError.omEncoder(error: String(cString: om_error_string(error)))
